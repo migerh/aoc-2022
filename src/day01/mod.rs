@@ -67,7 +67,6 @@ mod test {
     #[test]
     fn part2_sample() -> Result<(), ParseError> {
         let sample = sample();
-        println!("{:?}", sample);
         assert_eq!(solve_part2(&sample)?, 45_000);
         Ok(())
     }
