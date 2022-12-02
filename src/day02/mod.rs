@@ -9,12 +9,6 @@ pub enum RPS {
     Scissors,
 }
 
-pub enum GameState{
-    Loss,
-    Draw,
-    Win,
-}
-
 pub struct Game {
     you: RPS,
     opponent: RPS,
@@ -32,11 +26,9 @@ impl FromStr for RPS {
     }
 }
 
-impl FromStr for Game {
-    type Err = ParseError;
-
-    fn from_str(v: &str) -> Result<Game, ParseError> {
-        let s = v.split(" ")
+impl Game {
+    fn from_choices(s: &str) -> Result<Game, ParseError> {
+        let s = s.split(" ")
             .map(|s| RPS::from_str(s))
             .collect::<Result<Vec<_>, ParseError>>()?;
         if s.len() != 2 {
@@ -45,31 +37,35 @@ impl FromStr for Game {
 
         Ok(Game { you: s[1].clone(), opponent: s[0].clone() })
     }
-}
 
-impl Game {
-    fn game_state(&self) -> GameState {
-        match self.you {
-            RPS::Rock => GameState::Loss,
-            RPS::Paper => GameState::Draw,
-            RPS::Scissors => GameState::Win,
+    fn from_result(s: &str) -> Result<Game, ParseError> {
+        let s = s.split(" ")
+            .collect::<Vec<&str>>();
+
+        if s.len() != 2 {
+            return Err(ParseError::new("Could not parse"));
         }
+
+        let opponent = RPS::from_str(s[0])?;
+
+        let you = match (s[1], &opponent) {
+            ("X", RPS::Rock) => Ok(RPS::Scissors),
+            ("Y", RPS::Rock) => Ok(RPS::Rock),
+            ("Z", RPS::Rock) => Ok(RPS::Paper),
+            ("X", RPS::Paper) => Ok(RPS::Rock),
+            ("Y", RPS::Paper) => Ok(RPS::Paper),
+            ("Z", RPS::Paper) => Ok(RPS::Scissors),
+            ("X", RPS::Scissors) => Ok(RPS::Paper),
+            ("Y", RPS::Scissors) => Ok(RPS::Scissors),
+            ("Z", RPS::Scissors) => Ok(RPS::Rock),
+            _ => Err(ParseError::new("Could not parse"))
+        }?;
+
+        Ok(Game { you, opponent })
     }
-}
 
-#[aoc_generator(day2)]
-pub fn input_generator(input: &str) -> Result<Vec<Game>, ParseError> {
-    Ok(input
-        .lines()
-        .map(|l| Game::from_str(l))
-        .collect::<Result<Vec<_>, _>>()?)
-}
-
-#[aoc(day2, part1)]
-pub fn solve_part1(input: &Vec<Game>) -> Result<u32, ParseError> {
-    let mut sum = 0;
-    for game in input {
-        let score = match (&game.you, &game.opponent) {
+    fn score(&self) -> u32 {
+        match (&self.you, &self.opponent) {
             (RPS::Rock, RPS::Rock) => 4,
             (RPS::Rock, RPS::Paper) => 1,
             (RPS::Rock, RPS::Scissors) => 7,
@@ -79,30 +75,34 @@ pub fn solve_part1(input: &Vec<Game>) -> Result<u32, ParseError> {
             (RPS::Scissors, RPS::Rock) => 3,
             (RPS::Scissors, RPS::Paper) => 9,
             (RPS::Scissors, RPS::Scissors) => 6,
-        };
-        sum += score;
+        }
     }
-    Ok(sum)
+}
+
+#[aoc_generator(day2)]
+pub fn input_generator(input: &str) -> Result<Vec<String>, ParseError> {
+    Ok(input
+        .lines()
+        .map(|l| l.to_owned())
+        .collect::<Vec<_>>())
+}
+
+#[aoc(day2, part1)]
+pub fn solve_part1(input: &Vec<String>) -> Result<u32, ParseError> {
+    let input = input.into_iter()
+        .map(|g| Game::from_choices(g))
+        .collect::<Result<Vec<_>, ParseError>>()?;
+
+    Ok(input.iter().map(|g| g.score()).sum())
 }
 
 #[aoc(day2, part2)]
-pub fn solve_part2(input: &Vec<Game>) -> Result<u32, ParseError> {
-    let mut sum = 0;
-    for game in input {
-        let score = match (game.game_state(), &game.opponent) {
-            (GameState::Loss, RPS::Rock) => 3,
-            (GameState::Loss, RPS::Paper) => 1,
-            (GameState::Loss, RPS::Scissors) => 2,
-            (GameState::Draw, RPS::Rock) => 4,
-            (GameState::Draw, RPS::Paper) => 5,
-            (GameState::Draw, RPS::Scissors) => 6,
-            (GameState::Win, RPS::Rock) => 8,
-            (GameState::Win, RPS::Paper) => 9,
-            (GameState::Win, RPS::Scissors) => 7,
-        };
-        sum += score;
-    }
-    Ok(sum)
+pub fn solve_part2(input: &Vec<String>) -> Result<u32, ParseError> {
+    let input = input.into_iter()
+        .map(|g| Game::from_result(g))
+        .collect::<Result<Vec<_>, ParseError>>()?;
+
+    Ok(input.iter().map(|g| g.score()).sum())
 }
 
 #[cfg(test)]
@@ -115,7 +115,7 @@ B X
 C Z"
     }
 
-    fn sample() -> Vec<Game> {
+    fn sample() -> Vec<String> {
         input_generator(sample_input()).unwrap()
     }
 
