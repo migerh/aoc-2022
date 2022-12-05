@@ -77,20 +77,17 @@ pub struct Operation {
     instructions: Vec<Instruction>,
 }
 
-fn parse_state(s: &str) -> Result<State, ParseError> {
+fn parse_state(s: &str) -> Option<State> {
     let mut lines = s.lines().rev();
 
     // parse line with container numbers
     let last_stack_label = lines
-        .next()
-        .ok_or(ParseError::new("No stack labels found"))?
+        .next()?
         .trim()
         .chars()
-        .last()
-        .ok_or(ParseError::new("No stack labels found"))?;
+        .last()?;
 
-    let number_of_stacks = last_stack_label.to_digit(10)
-        .ok_or(ParseError::new("Could not parse stack label as number"))? as usize;
+    let number_of_stacks = last_stack_label.to_digit(10)? as usize;
 
     let mut stacks: State = vec![vec![]; number_of_stacks];
 
@@ -102,8 +99,7 @@ fn parse_state(s: &str) -> Result<State, ParseError> {
         while let Some(c) = chars.next() {
             if c != ' ' {
                 stacks
-                    .get_mut(stack)
-                    .ok_or(ParseError::new("Stack not found"))?
+                    .get_mut(stack)?
                     .push(c);
             }
 
@@ -115,7 +111,7 @@ fn parse_state(s: &str) -> Result<State, ParseError> {
         }
     }
 
-    Ok(stacks)
+    Some(stacks)
 }
 
 #[aoc_generator(day05)]
@@ -126,7 +122,8 @@ pub fn input_generator(input: &str) -> Result<Operation, ParseError> {
         .next()
         .ok_or(ParseError::new("Initial state not found"))?;
 
-    let initial_state = parse_state(top)?;
+    let initial_state = parse_state(top)
+        .ok_or(ParseError::new("Could not parse initial state"))?;
 
     let bottom = split
         .next()
