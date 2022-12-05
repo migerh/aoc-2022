@@ -47,7 +47,8 @@ impl FromStr for Instruction {
 
 impl Instruction {
     fn apply(&self, state: &mut State, is9001: bool) -> Result<(), ParseError> {
-        let source_length = state.get(self.from - 1)
+        let source_length = state
+            .get(self.from - 1)
             .ok_or(ParseError::new("Source stack not found"))?
             .len();
 
@@ -76,13 +77,58 @@ pub struct Operation {
     instructions: Vec<Instruction>,
 }
 
+fn parse_state(s: &str) -> Result<State, ParseError> {
+    let mut lines = s.lines().rev();
+
+    // parse line with container numbers
+    let last_stack_label = lines
+        .next()
+        .ok_or(ParseError::new("No stack labels found"))?
+        .chars()
+        .rev()
+        .filter(|v| *v != ' ')
+        .next()
+        .ok_or(ParseError::new("No stack labels found"))?;
+
+    let number_of_stacks = last_stack_label.to_digit(10)
+        .ok_or(ParseError::new("Could not parse stack label as number"))? as usize;
+
+    let mut stacks: State = vec![vec![]; number_of_stacks];
+
+    for line in lines {
+        let mut chars = line.chars();
+        chars.next();
+
+        let mut stack = 0;
+        while let Some(c) = chars.next() {
+            if c != ' ' {
+                stacks
+                    .get_mut(stack)
+                    .ok_or(ParseError::new("Stack not found"))?
+                    .push(c);
+            }
+
+            // skip() would consume the iterator :/
+            chars.next();
+            chars.next();
+            chars.next();
+            stack += 1;
+        }
+    }
+
+    Ok(stacks)
+}
+
 #[aoc_generator(day05)]
 pub fn input_generator(input: &str) -> Result<Operation, ParseError> {
     let mut split = input.split("\n\n");
 
-    let _top = split
+    let top = split
         .next()
         .ok_or(ParseError::new("Initial state not found"))?;
+
+    let initial_state = parse_state(top)?;
+
     let bottom = split
         .next()
         .ok_or(ParseError::new("Instructions not found"))?;
@@ -92,18 +138,6 @@ pub fn input_generator(input: &str) -> Result<Operation, ParseError> {
         .filter(|s| *s != "")
         .map(|s| Instruction::from_str(s))
         .collect::<Result<Vec<_>, ParseError>>()?;
-
-    let initial_state = vec![
-        "TDWZVP".chars().collect::<Vec<char>>(),
-        "LSWVFJD".chars().collect::<Vec<char>>(),
-        "ZMLSVTBH".chars().collect::<Vec<char>>(),
-        "RSJ".chars().collect::<Vec<char>>(),
-        "CZBGFMLW".chars().collect::<Vec<char>>(),
-        "QWVHZRGB".chars().collect::<Vec<char>>(),
-        "VJPCBDN".chars().collect::<Vec<char>>(),
-        "PTBQ".chars().collect::<Vec<char>>(),
-        "HGZRC".chars().collect::<Vec<char>>(),
-    ];
 
     Ok(Operation {
         initial_state,
@@ -151,7 +185,10 @@ mod test {
     use crate::utils::ParseError;
 
     fn sample() -> &'static str {
-        "<state>
+        "    [D]    
+[N] [C]    
+[Z] [M] [P]
+ 1   2   3 
 
 move 1 from 2 to 1
 move 3 from 1 to 3
@@ -160,15 +197,7 @@ move 1 from 1 to 2"
     }
 
     fn input() -> Result<Operation, ParseError> {
-        let initial_state = vec![
-            "ZN".chars().collect::<Vec<char>>(),
-            "MCD".chars().collect::<Vec<char>>(),
-            "P".chars().collect::<Vec<char>>(),
-        ];
-        let mut operation = input_generator(sample())?;
-        operation.initial_state = initial_state;
-
-        Ok(operation)
+        input_generator(sample())
     }
 
     #[test]
