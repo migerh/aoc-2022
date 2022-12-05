@@ -156,8 +156,8 @@ pub fn solve_part1(input: &Operation) -> Result<String, ParseError> {
 
     let result = state
         .iter()
-        .map(|stack| stack.last().unwrap())
-        .collect::<String>();
+        .map(|stack| stack.last().ok_or(ParseError::new("Stack is empty")))
+        .collect::<Result<String, ParseError>>()?;
 
     Ok(result)
 }
@@ -173,8 +173,8 @@ pub fn solve_part2(input: &Operation) -> Result<String, ParseError> {
 
     let result = state
         .iter()
-        .map(|stack| stack.last().unwrap())
-        .collect::<String>();
+        .map(|stack| stack.last().ok_or(ParseError::new("Stack is empty")))
+        .collect::<Result<String, ParseError>>()?;
 
     Ok(result)
 }
