@@ -84,10 +84,9 @@ fn parse_state(s: &str) -> Result<State, ParseError> {
     let last_stack_label = lines
         .next()
         .ok_or(ParseError::new("No stack labels found"))?
+        .trim()
         .chars()
-        .rev()
-        .filter(|v| *v != ' ')
-        .next()
+        .last()
         .ok_or(ParseError::new("No stack labels found"))?;
 
     let number_of_stacks = last_stack_label.to_digit(10)
