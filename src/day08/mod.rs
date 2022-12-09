@@ -1,11 +1,12 @@
 use crate::utils::ParseError;
+use anyhow::{Context, Result};
 use std::{cmp::max, collections::HashMap};
 
 type Coords = (isize, isize);
 type Forest = HashMap<Coords, usize>;
 
 #[aoc_generator(day08)]
-pub fn input_generator(input: &str) -> Result<Forest, ParseError> {
+pub fn input_generator(input: &str) -> Result<Forest> {
     Ok(input
         .lines()
         .filter(|s| !s.is_empty())
@@ -19,7 +20,7 @@ pub fn input_generator(input: &str) -> Result<Forest, ParseError> {
                 .collect::<Option<Vec<_>>>()
         })
         .collect::<Option<Vec<_>>>()
-        .ok_or(ParseError::new("Could not parse"))?
+        .context("Could not parse")?
         .into_iter()
         .flatten()
         .collect::<HashMap<_, _>>())
@@ -122,12 +123,12 @@ fn score_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) 
 }
 
 #[aoc(day08, part2)]
-pub fn solve_part2(forest: &Forest) -> Result<usize, ParseError> {
+pub fn solve_part2(forest: &Forest) -> Result<usize> {
     let size = get_size(forest);
 
     forest
         .iter()
         .map(|(p, _)| score(forest, size, p))
         .max()
-        .ok_or(ParseError::new("No max value found"))
+        .context("No max value found")
 }

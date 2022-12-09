@@ -1,7 +1,6 @@
+use anyhow::{Context, Error, Result};
 use regex::Regex;
 use std::str::FromStr;
-
-use crate::utils::ParseError;
 
 pub type Stack = Vec<char>;
 pub type State = Vec<Vec<char>>;
@@ -14,9 +13,9 @@ pub struct Instruction {
 }
 
 impl FromStr for Instruction {
-    type Err = ParseError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         lazy_static! {
             static ref RE: Regex =
                 Regex::new(r"^move (?P<number>\d+)? from (?P<from>\d) to (?P<to>\d)$").unwrap();
@@ -39,22 +38,22 @@ impl FromStr for Instruction {
 
                 Some((number, from, to))
             })
-            .ok_or(ParseError::new("Error during parse"))?;
+            .context("Error during parse")?;
 
         Ok(Instruction { number, from, to })
     }
 }
 
 impl Instruction {
-    fn apply(&self, state: &mut State, is9001: bool) -> Result<(), ParseError> {
+    fn apply(&self, state: &mut State, is9001: bool) -> Result<()> {
         let source_length = state
             .get(self.from - 1)
-            .ok_or(ParseError::new("Source stack not found"))?
+            .context("Source stack not found")?
             .len();
 
         let mut containers = state
             .get_mut(self.from - 1)
-            .ok_or(ParseError::new("Sourcce stack not found"))?
+            .context("Sourcce stack not found")?
             .drain((source_length - self.number)..)
             .collect::<Vec<_>>();
 
@@ -64,7 +63,7 @@ impl Instruction {
 
         state
             .get_mut(self.to - 1)
-            .ok_or(ParseError::new("Target stack not found"))?
+            .context("Target stack not found")?
             .extend(containers);
 
         Ok(())
@@ -109,24 +108,20 @@ fn parse_state(s: &str) -> Option<State> {
 }
 
 #[aoc_generator(day05)]
-pub fn input_generator(input: &str) -> Result<Operation, ParseError> {
+pub fn input_generator(input: &str) -> Result<Operation> {
     let mut split = input.split("\n\n");
 
-    let top = split
-        .next()
-        .ok_or(ParseError::new("Initial state not found"))?;
+    let top = split.next().context("Initial state not found")?;
 
-    let initial_state = parse_state(top).ok_or(ParseError::new("Could not parse initial state"))?;
+    let initial_state = parse_state(top).context("Could not parse initial state")?;
 
-    let bottom = split
-        .next()
-        .ok_or(ParseError::new("Instructions not found"))?;
+    let bottom = split.next().context("Instructions not found")?;
 
     let instructions = bottom
         .lines()
         .filter(|s| !s.is_empty())
         .map(Instruction::from_str)
-        .collect::<Result<Vec<_>, ParseError>>()?;
+        .collect::<Result<Vec<_>>>()?;
 
     Ok(Operation {
         initial_state,
@@ -135,7 +130,7 @@ pub fn input_generator(input: &str) -> Result<Operation, ParseError> {
 }
 
 #[aoc(day05, part1)]
-pub fn solve_part1(input: &Operation) -> Result<String, ParseError> {
+pub fn solve_part1(input: &Operation) -> Result<String> {
     let mut state = input.initial_state.clone();
     let is9001 = false;
 
@@ -145,14 +140,14 @@ pub fn solve_part1(input: &Operation) -> Result<String, ParseError> {
 
     let result = state
         .iter()
-        .map(|stack| stack.last().ok_or(ParseError::new("Stack is empty")))
-        .collect::<Result<String, ParseError>>()?;
+        .map(|stack| stack.last().context("Stack is empty"))
+        .collect::<Result<String>>()?;
 
     Ok(result)
 }
 
 #[aoc(day05, part2)]
-pub fn solve_part2(input: &Operation) -> Result<String, ParseError> {
+pub fn solve_part2(input: &Operation) -> Result<String> {
     let mut state = input.initial_state.clone();
     let is9001 = true;
 
@@ -162,8 +157,8 @@ pub fn solve_part2(input: &Operation) -> Result<String, ParseError> {
 
     let result = state
         .iter()
-        .map(|stack| stack.last().ok_or(ParseError::new("Stack is empty")))
-        .collect::<Result<String, ParseError>>()?;
+        .map(|stack| stack.last().context("Stack is empty"))
+        .collect::<Result<String>>()?;
 
     Ok(result)
 }
@@ -171,7 +166,6 @@ pub fn solve_part2(input: &Operation) -> Result<String, ParseError> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::utils::ParseError;
 
     fn sample() -> &'static str {
         "    [D]    
@@ -185,18 +179,18 @@ move 2 from 2 to 1
 move 1 from 1 to 2"
     }
 
-    fn input() -> Result<Operation, ParseError> {
+    fn input() -> Result<Operation> {
         input_generator(sample())
     }
 
     #[test]
-    fn part1_sample() -> Result<(), ParseError> {
+    fn part1_sample() -> Result<()> {
         let data = input()?;
         Ok(assert_eq!("CMZ", &solve_part1(&data)?))
     }
 
     #[test]
-    fn part2_sample() -> Result<(), ParseError> {
+    fn part2_sample() -> Result<()> {
         let data = input()?;
         Ok(assert_eq!("MCD", &solve_part2(&data)?))
     }

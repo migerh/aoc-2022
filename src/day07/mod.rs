@@ -1,4 +1,5 @@
 use crate::utils::ParseError;
+use anyhow::{Context, Error, Result};
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -7,12 +8,12 @@ pub struct File {
 }
 
 impl FromStr for File {
-    type Err = ParseError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.split(' ');
 
-        let size = usize::from_str(split.next().ok_or(ParseError::new("Not a file size"))?)?;
+        let size = usize::from_str(split.next().context("Not a file size")?)?;
         Ok(File { size })
     }
 }
@@ -47,7 +48,7 @@ impl Folder {
 }
 
 #[aoc_generator(day07)]
-pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
+pub fn input_generator(input: &str) -> Result<Vec<Folder>> {
     let mut lines = input.lines().rev().collect::<Vec<_>>();
     let mut entries: Vec<Folder> = vec![Folder::root()];
     let root = 0;
@@ -62,23 +63,27 @@ pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
         if line == "$ cd .." {
             current = entries
                 .get(current)
-                .ok_or(ParseError::new("Invalid entry"))?
+                .context("Invalid entry")?
                 .parent
-                .ok_or(ParseError::new("Cannot move past /"))?;
+                .context("Cannot move past /")?;
             continue;
         }
 
         if line.starts_with("$ cd") {
             let name = line.chars().skip(5).collect::<String>();
-            let entry = entries
-                .get(current)
-                .ok_or(ParseError::new("Folder not found"))?;
-            // TODO proper error handling
+            let entry = entries.get(current).context("Folder not found")?;
+
             current = *entry
                 .folders
                 .iter()
-                .find(|fid| entries.get(**fid).unwrap().name == name)
-                .unwrap();
+                .find(|fid| {
+                    if let Some(e) = entries.get(**fid) {
+                        e.name == name
+                    } else {
+                        false
+                    }
+                })
+                .context("Folder cd to not found")?;
             continue;
         }
 
@@ -91,9 +96,7 @@ pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
                     break;
                 }
                 let len = entries.len();
-                let current_folder = entries
-                    .get_mut(current)
-                    .ok_or(ParseError::new("Folder not found"))?;
+                let current_folder = entries.get_mut(current).context("Folder not found")?;
                 if entry.starts_with("dir") {
                     let new_index = len + offset;
                     let name = entry.chars().skip(4).collect::<String>();
@@ -120,8 +123,13 @@ fn size(drive: &Vec<Folder>, folder_id: usize) -> usize {
     file_size
         + drive
             .iter()
-            // TODO: fix unwrap
-            .filter(|f| f.parent.is_some() && f.parent.unwrap() == folder_id)
+            .filter(|f| {
+                if let Some(p) = f.parent {
+                    p == folder_id
+                } else {
+                    false
+                }
+            })
             .fold(0_usize, |acc, folder| acc + size(drive, folder.id))
 }
 
@@ -158,24 +166,23 @@ pub fn solve_part2(input: &Vec<Folder>) -> Result<usize, ParseError> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::utils::ParseError;
 
     fn sample() -> &'static str {
         ""
     }
 
-    fn input() -> Result<Vec<Folder>, ParseError> {
+    fn input() -> Result<Vec<Folder>> {
         input_generator(sample())
     }
 
     #[test]
-    fn part1_sample() -> Result<(), ParseError> {
+    fn part1_sample() -> Result<()> {
         let data = input()?;
         Ok(assert_eq!(0, solve_part1(&data)?))
     }
 
     #[test]
-    fn part2_sample() -> Result<(), ParseError> {
+    fn part2_sample() -> Result<()> {
         let data = input()?;
         Ok(assert_eq!(0, solve_part2(&data)?))
     }
