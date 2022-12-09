@@ -128,29 +128,3 @@ pub fn solve_part2(forest: &Forest) -> Result<usize, ParseError> {
         .max()
         .ok_or(ParseError::new("No max value found"))
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::utils::ParseError;
-
-    fn sample() -> &'static str {
-        ""
-    }
-
-    fn input() -> Result<Forest, ParseError> {
-        Ok(input_generator(sample())?)
-    }
-
-    #[test]
-    fn part1_sample() -> Result<(), ParseError> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part1(&data)?))
-    }
-
-    #[test]
-    fn part2_sample() -> Result<(), ParseError> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part2(&data)?))
-    }
-}
