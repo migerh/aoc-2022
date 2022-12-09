@@ -8,7 +8,7 @@ pub fn input_generator(input: &str) -> Result<Vec<u32>, ParseIntError> {
     let mut buffer: Vec<u32> = vec![];
 
     for line in input.lines() {
-        if line.len() == 0 {
+        if line.is_empty() {
             elves.push(buffer.iter().sum());
             buffer = vec![];
             continue;
@@ -16,7 +16,7 @@ pub fn input_generator(input: &str) -> Result<Vec<u32>, ParseIntError> {
         buffer.push(line.parse::<u32>()?);
     }
 
-    if buffer.len() > 0 {
+    if !buffer.is_empty() {
         elves.push(buffer.iter().sum());
     }
 
@@ -24,11 +24,11 @@ pub fn input_generator(input: &str) -> Result<Vec<u32>, ParseIntError> {
 }
 
 #[aoc(day1, part1)]
-pub fn solve_part1(input: &Vec<u32>) -> Result<u32, ParseError> {
+pub fn solve_part1(input: &[u32]) -> Result<u32, ParseError> {
     Ok(*input
         .iter()
         .max()
-        .ok_or(ParseError::new("Could not find max element"))?)
+        .ok_or_else(|| ParseError::new("Could not find max element"))?)
 }
 
 #[aoc(day1, part2)]

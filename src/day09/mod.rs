@@ -21,7 +21,7 @@ impl FromStr for Operation {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(" ");
+        let mut split = s.split(' ');
 
         let dir = split.next().unwrap();
         let direction = match dir {
@@ -43,9 +43,9 @@ impl FromStr for Operation {
 pub fn input_generator(input: &str) -> Result<Vec<Operation>, ParseError> {
     input
         .lines()
-        .filter(|s| *s != "")
+        .filter(|s| !s.is_empty())
         .map(|s| s.trim())
-        .map(|s| Operation::from_str(s))
+        .map(Operation::from_str)
         .collect::<Result<Vec<_>, ParseError>>()
 }
 
@@ -85,13 +85,13 @@ fn update_tail(head: &Coords, mut tail: Vec<Coords>) -> Vec<Coords> {
 fn simulate(ops: &Vec<Operation>, mut rope: Vec<Coords>) -> Option<usize> {
     let mut visited: HashSet<Coords> = HashSet::new();
     let mut head = (0, 0);
-    visited.insert(rope.last()?.clone());
+    visited.insert(*rope.last()?);
 
     for op in ops {
         for _ in 0..op.distance {
             head = move_head(op, &head);
             rope = update_tail(&head, rope);
-            visited.insert(rope.last()?.clone());
+            visited.insert(*rope.last()?);
         }
     }
 
@@ -131,7 +131,7 @@ mod test {
     }
 
     fn input1() -> Result<Vec<Operation>, ParseError> {
-        Ok(input_generator(sample1())?)
+        input_generator(sample1())
     }
 
     #[test]
@@ -158,7 +158,7 @@ mod test {
     }
 
     fn input2() -> Result<Vec<Operation>, ParseError> {
-        Ok(input_generator(sample2())?)
+        input_generator(sample2())
     }
 
     #[test]

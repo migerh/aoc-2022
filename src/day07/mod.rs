@@ -3,7 +3,6 @@ use crate::utils::ParseError;
 
 #[derive(Debug)]
 pub struct File {
-    name: String,
     size: usize,
 }
 
@@ -11,11 +10,10 @@ impl FromStr for File {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(" ");
+        let mut split = s.split(' ');
 
         let size = usize::from_str(split.next().ok_or(ParseError::new("Not a file size"))?)?;
-        let name = split.next().ok_or(ParseError::new("No file name"))?.to_owned();
-        Ok(File { name, size })
+        Ok(File { size })
     }
 }
 
@@ -75,7 +73,7 @@ pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
             let mut new_folders = vec![];
             let mut offset = 0;
             while let Some(entry) = lines.pop() {
-                if entry.starts_with("$") {
+                if entry.starts_with('$') {
                     lines.push(entry);
                     break;
                 }
@@ -150,7 +148,7 @@ mod test {
     }
 
     fn input() -> Result<Vec<Folder>, ParseError> {
-        Ok(input_generator(sample())?)
+        input_generator(sample())
     }
 
     #[test]

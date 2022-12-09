@@ -8,7 +8,7 @@ type Forest = HashMap<Coords, usize>;
 pub fn input_generator(input: &str) -> Result<Forest, ParseError> {
     Ok(input
         .lines()
-        .filter(|s| *s != "")
+        .filter(|s| !s.is_empty())
         .enumerate()
         .map(|(i, r)| -> Option<Vec<(Coords, usize)>> {
             r.chars().enumerate().map(|(j, c)| -> Option<(Coords, usize)> {
@@ -43,7 +43,7 @@ fn check_tree(forest: &Forest, size: Coords, coords: &Coords) -> bool {
 fn look_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) -> bool {
     let mut line = vec![];
 
-    let mut p = coords.clone();
+    let mut p = *coords;
     while p.0 >= 0 && p.1 >= 0 && p.0 <= size.0 && p.1 <= size.1 {
         if let Some(t) = forest.get(&p) {
             line.push(*t);
@@ -53,8 +53,8 @@ fn look_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) -
     }
 
     let tree_size = line[0];
-    for i in 1..line.len() {
-        if tree_size <= line[i] {
+    for l in line.iter().skip(1) {
+        if tree_size <= *l {
             return false;
         }
     }
@@ -68,7 +68,7 @@ pub fn solve_part1(input: &Forest) -> Result<usize, ParseError> {
     let (width, height) = get_size(input);
 
     let mut count = 0;
-    for (&(x, y), _) in forest {
+    for &(x, y) in forest.keys() {
         if x == 0 || x == width {
             count += 1;
             continue;
@@ -97,7 +97,7 @@ fn score(forest: &Forest, size: Coords, coords: &Coords) -> usize {
 fn score_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) -> usize {
     let mut line = vec![];
 
-    let mut p = coords.clone();
+    let mut p = *coords;
     while p.0 >= 0 && p.1 >= 0 && p.0 <= size.0 && p.1 <= size.1 {
         if let Some(t) = forest.get(&p) {
             line.push(*t);
@@ -107,11 +107,9 @@ fn score_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) 
 
     let tree_size = line[0];
     let mut score = 0;
-    for i in 1..line.len() {
-        if tree_size > line[i] {
-            score += 1;
-        } else {
-            score += 1;
+    for l in line.iter().skip(1) {
+        score += 1;
+        if tree_size <= *l {
             break;
         }
     }

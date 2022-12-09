@@ -6,7 +6,7 @@ pub fn input_generator(input: &str) -> Result<Vec<char>, ParseIntError> {
     Ok(input.chars().collect::<Vec<_>>())
 }
 
-fn solve(input: &Vec<char>, length: usize) -> usize {
+fn solve(input: &[char], length: usize) -> usize {
     let mut result = length;
 
     for w in input.windows(length) {
@@ -23,12 +23,12 @@ fn solve(input: &Vec<char>, length: usize) -> usize {
 }
 
 #[aoc(day06, part1)]
-pub fn solve_part1(input: &Vec<char>) -> Result<usize, ParseError> {
+pub fn solve_part1(input: &[char]) -> Result<usize, ParseError> {
     Ok(solve(input, 4))
 }
 
 #[aoc(day06, part2)]
-pub fn solve_part2(input: &Vec<char>) -> Result<usize, ParseError> {
+pub fn solve_part2(input: &[char]) -> Result<usize, ParseError> {
     Ok(solve(input, 14))
 }
 

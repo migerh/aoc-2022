@@ -6,7 +6,7 @@ use crate::utils::ParseError;
 pub fn input_generator(input: &str) -> Result<Vec<String>, ParseIntError> {
     Ok(input
         .lines()
-        .filter(|s| *s != "")
+        .filter(|s| !s.is_empty())
         .map(|s| s.to_owned())
         .collect::<Vec<_>>())
 }
@@ -20,7 +20,7 @@ fn score(c: char) -> Result<u32, ParseError> {
 }
 
 fn score_item_collections(input: &[String]) -> Result<u32, ParseError> {
-    if input.len() < 1 {
+    if input.is_empty() {
         return Err(ParseError::new("Not enough elves"));
     }
 
@@ -38,7 +38,7 @@ fn score_item_collections(input: &[String]) -> Result<u32, ParseError> {
 }
 
 #[aoc(day3, part1)]
-pub fn solve_part1(input: &Vec<String>) -> Result<u32, ParseError> {
+pub fn solve_part1(input: &[String]) -> Result<u32, ParseError> {
     let score: u32 = input.iter()
         .map(|s| -> Vec<String> {
             let len = s.len();
@@ -53,9 +53,9 @@ pub fn solve_part1(input: &Vec<String>) -> Result<u32, ParseError> {
 }
 
 #[aoc(day3, part2)]
-pub fn solve_part2(input: &Vec<String>) -> Result<u32, ParseError> {
+pub fn solve_part2(input: &[String]) -> Result<u32, ParseError> {
     let score: u32 = input.chunks(3)
-        .map(|c| score_item_collections(c))
+        .map(score_item_collections)
         .collect::<Result<Vec<_>, ParseError>>()?
         .iter()
         .sum();

@@ -131,8 +131,8 @@ pub fn input_generator(input: &str) -> Result<Operation, ParseError> {
 
     let instructions = bottom
         .lines()
-        .filter(|s| *s != "")
-        .map(|s| Instruction::from_str(s))
+        .filter(|s| !s.is_empty())
+        .map(Instruction::from_str)
         .collect::<Result<Vec<_>, ParseError>>()?;
 
     Ok(Operation {

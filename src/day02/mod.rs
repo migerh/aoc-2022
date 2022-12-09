@@ -28,8 +28,8 @@ impl FromStr for RPS {
 
 impl Game {
     fn from_choices(s: &str) -> Result<Game, ParseError> {
-        let s = s.split(" ")
-            .map(|s| RPS::from_str(s))
+        let s = s.split(' ')
+            .map(RPS::from_str)
             .collect::<Result<Vec<_>, ParseError>>()?;
         if s.len() != 2 {
             return Err(ParseError::new("Could not parse"));
@@ -39,7 +39,7 @@ impl Game {
     }
 
     fn from_result(s: &str) -> Result<Game, ParseError> {
-        let s = s.split(" ")
+        let s = s.split(' ')
             .collect::<Vec<&str>>();
 
         if s.len() != 2 {
@@ -88,8 +88,8 @@ pub fn input_generator(input: &str) -> Result<Vec<String>, ParseError> {
 }
 
 #[aoc(day2, part1)]
-pub fn solve_part1(input: &Vec<String>) -> Result<u32, ParseError> {
-    let input = input.into_iter()
+pub fn solve_part1(input: &[String]) -> Result<u32, ParseError> {
+    let input = input.iter()
         .map(|g| Game::from_choices(g))
         .collect::<Result<Vec<_>, ParseError>>()?;
 
@@ -97,8 +97,8 @@ pub fn solve_part1(input: &Vec<String>) -> Result<u32, ParseError> {
 }
 
 #[aoc(day2, part2)]
-pub fn solve_part2(input: &Vec<String>) -> Result<u32, ParseError> {
-    let input = input.into_iter()
+pub fn solve_part2(input: &[String]) -> Result<u32, ParseError> {
+    let input = input.iter()
         .map(|g| Game::from_result(g))
         .collect::<Result<Vec<_>, ParseError>>()?;
 

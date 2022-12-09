@@ -11,12 +11,12 @@ impl FromStr for Section {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, ParseError> {
-        let mut range = s.split("-");
+        let mut range = s.split('-');
 
         let start = u32::from_str(range.next()
-            .ok_or(ParseError::new("Invalid number of ranges"))?.trim())?;
+            .ok_or_else(|| ParseError::new("Invalid number of ranges"))?.trim())?;
         let end = u32::from_str(range.next()
-            .ok_or(ParseError::new("Invalid number of ranges"))?.trim())?;
+            .ok_or_else(|| ParseError::new("Invalid number of ranges"))?.trim())?;
 
         Ok(Section { start, end })
     }
@@ -32,7 +32,7 @@ impl FromStr for Pair {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, ParseError> {
-        let mut pairs = s.split(",");
+        let mut pairs = s.split(',');
 
         let first = Section::from_str(pairs.next()
             .ok_or(ParseError::new("Invalid number of elves"))?)?;
@@ -63,20 +63,20 @@ impl Pair {
 pub fn input_generator(input: &str) -> Result<Vec<Pair>, ParseError> {
     input
         .lines()
-        .filter(|s| *s != "")
-        .map(|s| Pair::from_str(s))
+        .filter(|s| !s.is_empty())
+        .map(Pair::from_str)
         .collect::<Result<Vec<_>, ParseError>>()
 }
 
 #[aoc(day04, part1)]
-pub fn solve_part1(input: &Vec<Pair>) -> Result<usize, ParseError> {
+pub fn solve_part1(input: &[Pair]) -> Result<usize, ParseError> {
     Ok(input.iter()
         .filter(|p| p.fully_contained())
         .count())
 }
 
 #[aoc(day04, part2)]
-pub fn solve_part2(input: &Vec<Pair>) -> Result<usize, ParseError> {
+pub fn solve_part2(input: &[Pair]) -> Result<usize, ParseError> {
     Ok(input.iter()
         .filter(|p| p.overlap())
         .count())
@@ -97,7 +97,7 @@ mod test {
     }
 
     fn input() -> Result<Vec<Pair>, ParseError> {
-        Ok(input_generator(sample())?)
+        input_generator(sample())
     }
 
     #[test]
