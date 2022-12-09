@@ -1,4 +1,5 @@
 use crate::utils::ParseError;
+use anyhow::{Context, Error, Result};
 use std::{collections::HashSet, str::FromStr};
 
 type Coords = (isize, isize);
@@ -18,12 +19,12 @@ pub struct Operation {
 }
 
 impl FromStr for Operation {
-    type Err = ParseError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Operation> {
         let mut split = s.split(' ');
 
-        let dir = split.next().unwrap();
+        let dir = split.next().context("Parsing direction failed")?;
         let direction = match dir {
             "L" => Direction::Left,
             "D" => Direction::Down,
@@ -32,11 +33,7 @@ impl FromStr for Operation {
             _ => Err(ParseError::new("Cannot parse direction"))?,
         };
 
-        let distance = isize::from_str(
-            split
-                .next()
-                .ok_or(ParseError::new("Cannot parse distance"))?,
-        )?;
+        let distance = isize::from_str(split.next().context("Parsing distance failed")?)?;
 
         Ok(Operation {
             direction,
@@ -46,13 +43,13 @@ impl FromStr for Operation {
 }
 
 #[aoc_generator(day09)]
-pub fn input_generator(input: &str) -> Result<Vec<Operation>, ParseError> {
+pub fn input_generator(input: &str) -> Result<Vec<Operation>> {
     input
         .lines()
         .filter(|s| !s.is_empty())
         .map(|s| s.trim())
         .map(Operation::from_str)
-        .collect::<Result<Vec<_>, ParseError>>()
+        .collect::<Result<Vec<_>, Error>>()
 }
 
 fn move_head(op: &Operation, p: &Coords) -> Coords {
@@ -105,23 +102,22 @@ fn simulate(ops: &Vec<Operation>, mut rope: Vec<Coords>) -> Option<usize> {
 }
 
 #[aoc(day09, part1)]
-pub fn solve_part1(input: &Vec<Operation>) -> Result<usize, ParseError> {
+pub fn solve_part1(input: &Vec<Operation>) -> Result<usize> {
     let rope = vec![(0, 0)];
 
-    simulate(input, rope).ok_or(ParseError::new("Cannot determine tail positions"))
+    simulate(input, rope).context("Simulation failed")
 }
 
 #[aoc(day09, part2)]
-pub fn solve_part2(input: &Vec<Operation>) -> Result<usize, ParseError> {
+pub fn solve_part2(input: &Vec<Operation>) -> Result<usize> {
     let rope = vec![(0, 0); 9];
 
-    simulate(input, rope).ok_or(ParseError::new("Cannot determine tail positions"))
+    simulate(input, rope).context("Simulation failed")
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::utils::ParseError;
 
     fn sample1() -> &'static str {
         "R 4
@@ -134,18 +130,18 @@ mod test {
         R 2"
     }
 
-    fn input1() -> Result<Vec<Operation>, ParseError> {
+    fn input1() -> Result<Vec<Operation>> {
         input_generator(sample1())
     }
 
     #[test]
-    fn part1_sample1() -> Result<(), ParseError> {
+    fn part1_sample1() -> Result<()> {
         let data = input1()?;
         Ok(assert_eq!(13, solve_part1(&data)?))
     }
 
     #[test]
-    fn part2_sample1() -> Result<(), ParseError> {
+    fn part2_sample1() -> Result<()> {
         let data = input1()?;
         Ok(assert_eq!(1, solve_part2(&data)?))
     }
@@ -161,18 +157,18 @@ mod test {
         U 20"
     }
 
-    fn input2() -> Result<Vec<Operation>, ParseError> {
+    fn input2() -> Result<Vec<Operation>> {
         input_generator(sample2())
     }
 
     #[test]
-    fn part1_sample2() -> Result<(), ParseError> {
+    fn part1_sample2() -> Result<()> {
         let data = input2()?;
         Ok(assert_eq!(88, solve_part1(&data)?))
     }
 
     #[test]
-    fn part2_sample2() -> Result<(), ParseError> {
+    fn part2_sample2() -> Result<()> {
         let data = input2()?;
         Ok(assert_eq!(36, solve_part2(&data)?))
     }
