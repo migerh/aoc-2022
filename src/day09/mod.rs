@@ -1,5 +1,5 @@
-use std::{str::FromStr, collections::HashSet};
 use crate::utils::ParseError;
+use std::{collections::HashSet, str::FromStr};
 
 type Coords = (isize, isize);
 
@@ -29,13 +29,19 @@ impl FromStr for Operation {
             "D" => Direction::Down,
             "R" => Direction::Right,
             "U" => Direction::Up,
-            _ => Err(ParseError::new("Cannot parse direction"))?
+            _ => Err(ParseError::new("Cannot parse direction"))?,
         };
 
-        let distance = isize::from_str(split.next()
-            .ok_or(ParseError::new("Cannot parse distance"))?)?;
+        let distance = isize::from_str(
+            split
+                .next()
+                .ok_or(ParseError::new("Cannot parse distance"))?,
+        )?;
 
-        Ok(Operation { direction, distance })
+        Ok(Operation {
+            direction,
+            distance,
+        })
     }
 }
 
@@ -63,7 +69,7 @@ fn close_enough(a: &Coords, b: &Coords) -> bool {
     (a.0 - b.0).abs() <= 1 && (a.1 - b.1).abs() <= 1
 }
 
-fn update_member(head: &Coords, member: Coords) -> Coords{
+fn update_member(head: &Coords, member: Coords) -> Coords {
     if close_enough(head, &member) {
         return member;
     }
@@ -76,7 +82,7 @@ fn update_tail(head: &Coords, mut tail: Vec<Coords>) -> Vec<Coords> {
     tail[0] = update_member(head, tail[0]);
 
     for i in 1..tail.len() {
-        tail[i] = update_member(&tail[i-1], tail[i]);
+        tail[i] = update_member(&tail[i - 1], tail[i]);
     }
 
     tail
@@ -102,16 +108,14 @@ fn simulate(ops: &Vec<Operation>, mut rope: Vec<Coords>) -> Option<usize> {
 pub fn solve_part1(input: &Vec<Operation>) -> Result<usize, ParseError> {
     let rope = vec![(0, 0)];
 
-    simulate(input, rope)
-        .ok_or(ParseError::new("Cannot determine tail positions"))
+    simulate(input, rope).ok_or(ParseError::new("Cannot determine tail positions"))
 }
 
 #[aoc(day09, part2)]
 pub fn solve_part2(input: &Vec<Operation>) -> Result<usize, ParseError> {
     let rope = vec![(0, 0); 9];
 
-    simulate(input, rope)
-        .ok_or(ParseError::new("Cannot determine tail positions"))
+    simulate(input, rope).ok_or(ParseError::new("Cannot determine tail positions"))
 }
 
 #[cfg(test)]

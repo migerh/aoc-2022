@@ -1,5 +1,5 @@
-use std::{collections::HashMap, cmp::max};
 use crate::utils::ParseError;
+use std::{cmp::max, collections::HashMap};
 
 type Coords = (isize, isize);
 type Forest = HashMap<Coords, usize>;
@@ -11,11 +11,15 @@ pub fn input_generator(input: &str) -> Result<Forest, ParseError> {
         .filter(|s| !s.is_empty())
         .enumerate()
         .map(|(i, r)| -> Option<Vec<(Coords, usize)>> {
-            r.chars().enumerate().map(|(j, c)| -> Option<(Coords, usize)> {
-                Some(((j as isize, i as isize), c.to_digit(10)? as usize))
-            }).collect::<Option<Vec<_>>>()
+            r.chars()
+                .enumerate()
+                .map(|(j, c)| -> Option<(Coords, usize)> {
+                    Some(((j as isize, i as isize), c.to_digit(10)? as usize))
+                })
+                .collect::<Option<Vec<_>>>()
         })
-        .collect::<Option<Vec<_>>>().ok_or(ParseError::new("Could not parse"))?
+        .collect::<Option<Vec<_>>>()
+        .ok_or(ParseError::new("Could not parse"))?
         .into_iter()
         .flatten()
         .collect::<HashMap<_, _>>())
@@ -34,10 +38,10 @@ fn get_size(forest: &Forest) -> (isize, isize) {
 }
 
 fn check_tree(forest: &Forest, size: Coords, coords: &Coords) -> bool {
-    look_dir(forest, size, coords, (-1, 0)) ||
-    look_dir(forest, size, coords, (1, 0)) ||
-    look_dir(forest, size, coords, (0, 1)) ||
-    look_dir(forest, size, coords, (0, -1))
+    look_dir(forest, size, coords, (-1, 0))
+        || look_dir(forest, size, coords, (1, 0))
+        || look_dir(forest, size, coords, (0, 1))
+        || look_dir(forest, size, coords, (0, -1))
 }
 
 fn look_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) -> bool {
@@ -88,10 +92,10 @@ pub fn solve_part1(input: &Forest) -> Result<usize, ParseError> {
 }
 
 fn score(forest: &Forest, size: Coords, coords: &Coords) -> usize {
-    score_dir(forest, size, coords, (0, -1)) *
-    score_dir(forest, size, coords, (-1, 0)) *
-    score_dir(forest, size, coords, (0, 1)) *
-    score_dir(forest, size, coords, (1, 0))
+    score_dir(forest, size, coords, (0, -1))
+        * score_dir(forest, size, coords, (-1, 0))
+        * score_dir(forest, size, coords, (0, 1))
+        * score_dir(forest, size, coords, (1, 0))
 }
 
 fn score_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) -> usize {
@@ -121,7 +125,8 @@ fn score_dir(forest: &Forest, size: Coords, coords: &Coords, direction: Coords) 
 pub fn solve_part2(forest: &Forest) -> Result<usize, ParseError> {
     let size = get_size(forest);
 
-    forest.iter()
+    forest
+        .iter()
         .map(|(p, _)| score(forest, size, p))
         .max()
         .ok_or(ParseError::new("No max value found"))

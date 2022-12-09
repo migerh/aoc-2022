@@ -25,9 +25,7 @@ fn score_item_collections(input: &[String]) -> Result<u32, ParseError> {
     }
 
     for c in input[0].chars() {
-        let all_others_contain_c = input.iter()
-            .skip(1)
-            .all(|v| v.contains(c));
+        let all_others_contain_c = input.iter().skip(1).all(|v| v.contains(c));
 
         if all_others_contain_c {
             return score(c);
@@ -39,7 +37,8 @@ fn score_item_collections(input: &[String]) -> Result<u32, ParseError> {
 
 #[aoc(day3, part1)]
 pub fn solve_part1(input: &[String]) -> Result<u32, ParseError> {
-    let score: u32 = input.iter()
+    let score: u32 = input
+        .iter()
         .map(|s| -> Vec<String> {
             let len = s.len();
             let compartment1 = s.chars().take(len / 2).collect::<String>();
@@ -48,13 +47,15 @@ pub fn solve_part1(input: &[String]) -> Result<u32, ParseError> {
         })
         .map(|k| score_item_collections(&k))
         .collect::<Result<Vec<_>, ParseError>>()?
-        .iter().sum();
+        .iter()
+        .sum();
     Ok(score)
 }
 
 #[aoc(day3, part2)]
 pub fn solve_part2(input: &[String]) -> Result<u32, ParseError> {
-    let score: u32 = input.chunks(3)
+    let score: u32 = input
+        .chunks(3)
         .map(score_item_collections)
         .collect::<Result<Vec<_>, ParseError>>()?
         .iter()

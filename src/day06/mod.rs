@@ -1,5 +1,5 @@
-use std::{num::ParseIntError, collections::HashSet};
 use crate::utils::ParseError;
+use std::{collections::HashSet, num::ParseIntError};
 
 #[aoc_generator(day06)]
 pub fn input_generator(input: &str) -> Result<Vec<char>, ParseIntError> {

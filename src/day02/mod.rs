@@ -21,26 +21,29 @@ impl FromStr for RPS {
             "A" | "X" => Ok(RPS::Rock),
             "B" | "Y" => Ok(RPS::Paper),
             "C" | "Z" => Ok(RPS::Scissors),
-            _ => Err(ParseError::new("Could not parse"))
+            _ => Err(ParseError::new("Could not parse")),
         }
     }
 }
 
 impl Game {
     fn from_choices(s: &str) -> Result<Game, ParseError> {
-        let s = s.split(' ')
+        let s = s
+            .split(' ')
             .map(RPS::from_str)
             .collect::<Result<Vec<_>, ParseError>>()?;
         if s.len() != 2 {
             return Err(ParseError::new("Could not parse"));
         }
 
-        Ok(Game { you: s[1].clone(), opponent: s[0].clone() })
+        Ok(Game {
+            you: s[1].clone(),
+            opponent: s[0].clone(),
+        })
     }
 
     fn from_result(s: &str) -> Result<Game, ParseError> {
-        let s = s.split(' ')
-            .collect::<Vec<&str>>();
+        let s = s.split(' ').collect::<Vec<&str>>();
 
         if s.len() != 2 {
             return Err(ParseError::new("Could not parse"));
@@ -58,7 +61,7 @@ impl Game {
             ("X", RPS::Scissors) => Ok(RPS::Paper),
             ("Y", RPS::Scissors) => Ok(RPS::Scissors),
             ("Z", RPS::Scissors) => Ok(RPS::Rock),
-            _ => Err(ParseError::new("Could not parse"))
+            _ => Err(ParseError::new("Could not parse")),
         }?;
 
         Ok(Game { you, opponent })
@@ -81,15 +84,13 @@ impl Game {
 
 #[aoc_generator(day2)]
 pub fn input_generator(input: &str) -> Result<Vec<String>, ParseError> {
-    Ok(input
-        .lines()
-        .map(|l| l.to_owned())
-        .collect::<Vec<_>>())
+    Ok(input.lines().map(|l| l.to_owned()).collect::<Vec<_>>())
 }
 
 #[aoc(day2, part1)]
 pub fn solve_part1(input: &[String]) -> Result<u32, ParseError> {
-    let input = input.iter()
+    let input = input
+        .iter()
         .map(|g| Game::from_choices(g))
         .collect::<Result<Vec<_>, ParseError>>()?;
 
@@ -98,7 +99,8 @@ pub fn solve_part1(input: &[String]) -> Result<u32, ParseError> {
 
 #[aoc(day2, part2)]
 pub fn solve_part2(input: &[String]) -> Result<u32, ParseError> {
-    let input = input.iter()
+    let input = input
+        .iter()
         .map(|g| Game::from_result(g))
         .collect::<Result<Vec<_>, ParseError>>()?;
 

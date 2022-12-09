@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use crate::utils::ParseError;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Section {
@@ -13,10 +13,18 @@ impl FromStr for Section {
     fn from_str(s: &str) -> Result<Self, ParseError> {
         let mut range = s.split('-');
 
-        let start = u32::from_str(range.next()
-            .ok_or_else(|| ParseError::new("Invalid number of ranges"))?.trim())?;
-        let end = u32::from_str(range.next()
-            .ok_or_else(|| ParseError::new("Invalid number of ranges"))?.trim())?;
+        let start = u32::from_str(
+            range
+                .next()
+                .ok_or_else(|| ParseError::new("Invalid number of ranges"))?
+                .trim(),
+        )?;
+        let end = u32::from_str(
+            range
+                .next()
+                .ok_or_else(|| ParseError::new("Invalid number of ranges"))?
+                .trim(),
+        )?;
 
         Ok(Section { start, end })
     }
@@ -34,10 +42,16 @@ impl FromStr for Pair {
     fn from_str(s: &str) -> Result<Self, ParseError> {
         let mut pairs = s.split(',');
 
-        let first = Section::from_str(pairs.next()
-            .ok_or(ParseError::new("Invalid number of elves"))?)?;
-        let second = Section::from_str(pairs.next()
-            .ok_or(ParseError::new("Invalid number of elves"))?)?;
+        let first = Section::from_str(
+            pairs
+                .next()
+                .ok_or(ParseError::new("Invalid number of elves"))?,
+        )?;
+        let second = Section::from_str(
+            pairs
+                .next()
+                .ok_or(ParseError::new("Invalid number of elves"))?,
+        )?;
 
         Ok(Pair { first, second })
     }
@@ -45,17 +59,17 @@ impl FromStr for Pair {
 
 impl Pair {
     fn fully_contained(&self) -> bool {
-        let first_contains_second = self.first.start <= self.second.start &&
-            self.second.end <= self.first.end;
-        let second_contains_first = self.second.start <= self.first.start &&
-            self.first.end <= self.second.end;
+        let first_contains_second =
+            self.first.start <= self.second.start && self.second.end <= self.first.end;
+        let second_contains_first =
+            self.second.start <= self.first.start && self.first.end <= self.second.end;
 
         first_contains_second || second_contains_first
     }
 
     fn overlap(&self) -> bool {
-        (self.second.start >= self.first.start && self.second.start <= self.first.end) ||
-        (self.first.start >= self.second.start && self.first.start <= self.second.end)
+        (self.second.start >= self.first.start && self.second.start <= self.first.end)
+            || (self.first.start >= self.second.start && self.first.start <= self.second.end)
     }
 }
 
@@ -70,16 +84,12 @@ pub fn input_generator(input: &str) -> Result<Vec<Pair>, ParseError> {
 
 #[aoc(day04, part1)]
 pub fn solve_part1(input: &[Pair]) -> Result<usize, ParseError> {
-    Ok(input.iter()
-        .filter(|p| p.fully_contained())
-        .count())
+    Ok(input.iter().filter(|p| p.fully_contained()).count())
 }
 
 #[aoc(day04, part2)]
 pub fn solve_part2(input: &[Pair]) -> Result<usize, ParseError> {
-    Ok(input.iter()
-        .filter(|p| p.overlap())
-        .count())
+    Ok(input.iter().filter(|p| p.overlap()).count())
 }
 
 #[cfg(test)]

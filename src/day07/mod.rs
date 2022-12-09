@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use crate::utils::ParseError;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct File {
@@ -36,7 +36,13 @@ impl Folder {
         let name = name.to_owned();
         let folders = vec![];
         let files = vec![];
-        Folder { name, id, folders, files, parent }
+        Folder {
+            name,
+            id,
+            folders,
+            files,
+            parent,
+        }
     }
 }
 
@@ -54,7 +60,8 @@ pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
         }
 
         if line == "$ cd .." {
-            current = entries.get(current)
+            current = entries
+                .get(current)
                 .ok_or(ParseError::new("Invalid entry"))?
                 .parent
                 .ok_or(ParseError::new("Cannot move past /"))?;
@@ -63,9 +70,15 @@ pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
 
         if line.starts_with("$ cd") {
             let name = line.chars().skip(5).collect::<String>();
-            let entry = entries.get(current).ok_or(ParseError::new("Folder not found"))?;
+            let entry = entries
+                .get(current)
+                .ok_or(ParseError::new("Folder not found"))?;
             // TODO proper error handling
-            current = *entry.folders.iter().find(|fid| entries.get(**fid).unwrap().name == name).unwrap();
+            current = *entry
+                .folders
+                .iter()
+                .find(|fid| entries.get(**fid).unwrap().name == name)
+                .unwrap();
             continue;
         }
 
@@ -78,7 +91,9 @@ pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
                     break;
                 }
                 let len = entries.len();
-                let current_folder = entries.get_mut(current).ok_or(ParseError::new("Folder not found"))?;
+                let current_folder = entries
+                    .get_mut(current)
+                    .ok_or(ParseError::new("Folder not found"))?;
                 if entry.starts_with("dir") {
                     let new_index = len + offset;
                     let name = entry.chars().skip(4).collect::<String>();
@@ -102,17 +117,18 @@ pub fn input_generator(input: &str) -> Result<Vec<Folder>, ParseError> {
 
 fn size(drive: &Vec<Folder>, folder_id: usize) -> usize {
     let file_size: usize = drive[folder_id].files.iter().map(|file| file.size).sum();
-    file_size + drive.iter()
-        // TODO: fix unwrap
-        .filter(|f| f.parent.is_some() && f.parent.unwrap() == folder_id)
-        .fold(0_usize, |acc, folder| {
-            acc + size(drive, folder.id)
-        })
+    file_size
+        + drive
+            .iter()
+            // TODO: fix unwrap
+            .filter(|f| f.parent.is_some() && f.parent.unwrap() == folder_id)
+            .fold(0_usize, |acc, folder| acc + size(drive, folder.id))
 }
 
 #[aoc(day07, part1)]
 pub fn solve_part1(input: &Vec<Folder>) -> Result<usize, ParseError> {
-    let sizes: usize = input.iter()
+    let sizes: usize = input
+        .iter()
         .enumerate()
         .map(|(i, _)| size(input, i))
         .filter(|size| *size <= 100_000)
@@ -128,7 +144,8 @@ pub fn solve_part2(input: &Vec<Folder>) -> Result<usize, ParseError> {
     let used = size(input, 0);
     let free_space = total - used;
 
-    let mut sizes = input.iter()
+    let mut sizes = input
+        .iter()
         .enumerate()
         .map(|(i, _)| size(input, i))
         .filter(|size| free_space + size >= needed)

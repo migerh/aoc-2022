@@ -81,11 +81,7 @@ fn parse_state(s: &str) -> Option<State> {
     let mut lines = s.lines().rev();
 
     // parse line with container numbers
-    let last_stack_label = lines
-        .next()?
-        .trim()
-        .chars()
-        .last()?;
+    let last_stack_label = lines.next()?.trim().chars().last()?;
 
     let number_of_stacks = last_stack_label.to_digit(10)? as usize;
 
@@ -98,9 +94,7 @@ fn parse_state(s: &str) -> Option<State> {
         let mut stack = 0;
         while let Some(c) = chars.next() {
             if c != ' ' {
-                stacks
-                    .get_mut(stack)?
-                    .push(c);
+                stacks.get_mut(stack)?.push(c);
             }
 
             // skip() would consume the iterator :/
@@ -122,8 +116,7 @@ pub fn input_generator(input: &str) -> Result<Operation, ParseError> {
         .next()
         .ok_or(ParseError::new("Initial state not found"))?;
 
-    let initial_state = parse_state(top)
-        .ok_or(ParseError::new("Could not parse initial state"))?;
+    let initial_state = parse_state(top).ok_or(ParseError::new("Could not parse initial state"))?;
 
     let bottom = split
         .next()
