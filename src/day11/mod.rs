@@ -126,16 +126,16 @@ fn level(mut inspects: Vec<usize>) -> usize {
 }
 
 #[aoc(day11, part1)]
-pub fn solve_part1(input: &Vec<Monkey>) -> Result<usize> {
-    let monkeys = input.clone();
+pub fn solve_part1(input: &[Monkey]) -> Result<usize> {
+    let monkeys = input.to_owned();
     let inspects = conduct_monkey_business(monkeys, 20, 3)?;
 
     Ok(level(inspects))
 }
 
 #[aoc(day11, part2)]
-pub fn solve_part2(input: &Vec<Monkey>) -> Result<usize> {
-    let monkeys = input.clone();
+pub fn solve_part2(input: &[Monkey]) -> Result<usize> {
+    let monkeys = input.to_owned();
     let inspects = conduct_monkey_business(monkeys, 10_000, 1)?;
 
     Ok(level(inspects))
