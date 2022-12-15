@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use anyhow::{Context, Error, Result};
 use regex::Regex;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 enum State {
     Beacon,
     Sensor,
@@ -66,7 +66,6 @@ fn manhattan(a: &Coords, b: &Coords) -> i128 {
 
 fn mark_sensor(sensor: &Sensor, map: &mut Map, line: i128) {
     let distance = manhattan(&sensor.pos, &sensor.beacon);
-    println!("distance {distance}");
 
     let pos = sensor.pos;
     map.entry(pos)
@@ -93,10 +92,8 @@ fn mark_sensor(sensor: &Sensor, map: &mut Map, line: i128) {
 pub fn solve_part1(input: &[Sensor]) -> Result<usize> {
     let mut map = Map::new();
     let line = 2_000_000;
-    // let line = 10;
 
     for sensor in input {
-        println!("Sensor at ({}, {})", sensor.pos.0, sensor.pos.1);
         mark_sensor(sensor, &mut map, line);
     }
 
@@ -118,9 +115,87 @@ pub fn solve_part1(input: &[Sensor]) -> Result<usize> {
     Ok(result)
 }
 
+fn check(pos: &Coords, sensors: &[Sensor], limit: usize) -> bool {
+    let mut fits = pos.0 >= 0 && pos.0 <= limit as i128 &&
+        pos.1 >= 0 && pos.1 <= limit as i128;
+
+    if !fits {
+        return false;
+    }
+
+    for sensor in sensors {
+        let distance = manhattan(&sensor.pos, &sensor.beacon);
+        fits = fits && manhattan(&sensor.pos, pos) > distance;
+
+        if !fits {
+            return false;
+        }
+    }
+
+    fits
+}
+
+fn walk_border(sensors: &[Sensor], index: usize, limit: usize) -> Option<Coords> {
+    if index >= sensors.len() {
+        return None;
+    }
+
+    let sensor = sensors.get(index)?;
+    let distance = manhattan(&sensor.pos, &sensor.beacon);
+
+    let mut pos = (sensor.pos.0 - distance - 1, sensor.pos.1);
+
+    while pos.0 != sensor.pos.0 {
+        pos.0 += 1;
+        pos.1 += 1;
+
+        if check(&pos, sensors, limit) {
+            return Some(pos);
+        }
+    }
+
+    while pos.1 != sensor.pos.1 {
+        pos.0 += 1;
+        pos.1 -= 1;
+
+        if check(&pos, sensors, limit) {
+            return Some(pos);
+        }
+    }
+
+    while pos.0 != sensor.pos.0 {
+        pos.0 -= 1;
+        pos.1 -= 1;
+
+        if check(&pos, sensors, limit) {
+            return Some(pos);
+        }
+    }
+
+    while pos.1 != sensor.pos.1 {
+        pos.0 -= 1;
+        pos.1 += 1;
+
+        if check(&pos, sensors, limit) {
+            return Some(pos);
+        }
+    }
+
+    None
+}
+
 #[aoc(day15, part2)]
-pub fn solve_part2(input: &[Sensor]) -> Result<usize> {
-    Ok(input.len())
+pub fn solve_part2(input: &[Sensor]) -> Result<i128> {
+    let limit = 4_000_000;
+    let mut result = None;
+    for (i, _) in input.iter().enumerate() {
+        if let Some(p) = walk_border(input, i, limit) {
+            result = Some(p.0 * (limit as i128) + p.1);
+            break;
+        }
+    }
+
+    result.context("No solution found")
 }
 
 #[cfg(test)]
