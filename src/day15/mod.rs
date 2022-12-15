@@ -197,28 +197,3 @@ pub fn solve_part2(input: &[Sensor]) -> Result<i128> {
 
     result.context("No solution found")
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    fn sample() -> &'static str {
-        ""
-    }
-
-    fn input() -> Result<Vec<Sensor>> {
-        input_generator(sample())
-    }
-
-    #[test]
-    fn part1_sample() -> Result<()> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part1(&data)?))
-    }
-
-    #[test]
-    fn part2_sample() -> Result<()> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part2(&data)?))
-    }
-}
