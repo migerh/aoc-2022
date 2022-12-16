@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use anyhow::{Context, Error, Result};
@@ -8,11 +9,12 @@ use regex::Regex;
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Valve {
     name: String,
+    index: usize,
     flow_rate: usize,
     valves: Vec<String>,
 }
 
-type Node = (Valve, usize, usize, isize, Vec<String>);
+type Node = (Valve, usize, usize, isize, Vec<bool>);
 
 impl FromStr for Valve {
     type Err = Error;
@@ -45,6 +47,7 @@ impl FromStr for Valve {
 
         Ok(Valve {
             name,
+            index: 0,
             flow_rate,
             valves,
         })
@@ -79,10 +82,10 @@ fn get_neighbors(valves: &[Valve], pos: &Node) -> Vec<(Node, isize)> {
     let opened = valves
         .iter()
         .filter(|v| v.flow_rate > 0)
-        .filter(|v| pos.0.valves.contains(&v.name) && !pos.4.contains(&v.name))
+        .filter(|v| pos.0.valves.contains(&v.name) && !pos.4[v.index])
         .map(|v| {
             let mut opened = pos.4.clone();
-            opened.push(v.clone().name);
+            opened[v.index] = true;
 
             (
                 (
@@ -101,14 +104,19 @@ fn get_neighbors(valves: &[Valve], pos: &Node) -> Vec<(Node, isize)> {
 
 #[aoc(day16, part1)]
 pub fn solve_part1(input: &[Valve]) -> Result<isize> {
-    let start = input
+    let valves = input.iter().cloned().enumerate().map(|(i, mut v)| {
+        v.index = i;
+        v
+    }).collect::<Vec<_>>();
+
+    let start =valves 
         .iter()
         .find(|v| v.name == "AA")
         .context("Cannot find start")?;
 
     let result = dijkstra_all(
-        &(start.clone(), 0, 0, 0, vec![]),
-        |v| get_neighbors(input, v),
+        &(start.clone(), 0, 0, 0, vec![false; valves.len()]),
+        |v| get_neighbors(&valves, v),
         // |v| v.1 == 30,
     ); // .context("Dijkstra failed")?;
     println!("total results {}", result.len());
