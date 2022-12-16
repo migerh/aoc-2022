@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::{Context, Error, Result};
+use pathfinding::prelude::dijkstra_all;
 use pathfinding::prelude::dijkstra;
 use regex::Regex;
 
@@ -67,24 +68,19 @@ fn get_neighbors(valves: &[Valve], pos: &Node) -> Vec<(Node, isize)> {
 
     let all_neighbor_valves = valves
         .iter()
-        .filter(|v| pos.0.valves.contains(&v.name))
-        .collect::<Vec<_>>();
+        .filter(|v| pos.0.valves.contains(&v.name));
     
     let unopened = all_neighbor_valves
-        .iter()
-        .map(|&v| {
+        .map(|v| {
             ((v.clone(), pos.1 + 1, pos.2, pos.3, pos.4.clone()), 0)
-        })
-        .collect::<Vec<_>>();
+        });
 
-    let unopened_neighbor_valves = valves
+
+    let opened = valves
         .iter()
+        .filter(|v| v.flow_rate > 0)
         .filter(|v| pos.0.valves.contains(&v.name) && !pos.4.contains(&v.name))
-        .collect::<Vec<_>>();
-
-    let opened = unopened_neighbor_valves
-        .iter()
-        .map(|&v| {
+        .map(|v| {
             let mut opened = pos.4.clone();
             opened.push(v.clone().name);
 
@@ -98,13 +94,9 @@ fn get_neighbors(valves: &[Valve], pos: &Node) -> Vec<(Node, isize)> {
                 ),
                 -((v.flow_rate * (30 - pos.1 - 2)) as isize),
             )
-        })
-        .collect::<Vec<_>>();
+        });
 
-    vec![opened, unopened]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>()
+    opened.chain(unopened).collect::<Vec<_>>()
 }
 
 #[aoc(day16, part1)]
@@ -114,17 +106,31 @@ pub fn solve_part1(input: &[Valve]) -> Result<isize> {
         .find(|v| v.name == "AA")
         .context("Cannot find start")?;
 
-    let result = dijkstra(
+    let result = dijkstra_all(
         &(start.clone(), 0, 0, 0, vec![]),
         |v| get_neighbors(input, v),
-        |v| v.1 == 30,
-    ).context("Dijkstra failed")?;
+        // |v| v.1 == 30,
+    ); // .context("Dijkstra failed")?;
+    println!("total results {}", result.len());
 
-    for r in result.0 {
-        println!("{:?}", r);
-    }
-    let total_flow = -result.1;
-    Ok(total_flow)
+    let max_flow = result.iter()
+        .map(|v| v.0)
+        .filter(|v| v.1 == 30)
+        .map(|v| v.3)
+        .min()
+        .context("Could not determine result")?;
+
+    // for r in result.iter().filter(|v| v.0.1 == 30).map(|v| v.0) {
+    //     println!("{:?}", r);
+    // }
+
+    println!("max {:?}", max_flow);
+
+    // for r in result {
+    //     println!("{:?}", r);
+    // }
+    // let total_flow = -result.1;
+    Ok(-max_flow)
 }
 
 #[aoc(day16, part2)]
