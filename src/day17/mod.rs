@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 
 use anyhow::{Context, Result};
 
-const DEBUG: bool = false;
 const WIDTH: usize = 7;
 const ROCK_FORMS: &str = "####
 
@@ -141,10 +140,6 @@ fn drop_rocks(streams: &[char], count: usize) -> Option<usize> {
         for y in 0..rock.height {
             let sy = rock.height - y - 1;
             let gy = rock.top - sy;
-
-            if DEBUG {
-                println!("{} {} {sy} {gy} {}", rock.height, rock.top, map.len());
-            }
 
             if map.len() < gy + 1 {
                 map.push_back(vec!['.'; WIDTH]);
