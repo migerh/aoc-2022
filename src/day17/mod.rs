@@ -170,8 +170,7 @@ fn drop_rocks(streams: &[char], count: usize) -> Option<usize> {
 
 #[aoc(day17, part1)]
 pub fn solve_part1(input: &[char]) -> Result<usize> {
-    let result = drop_rocks(input, 2022).context("failed")?;
-    Ok(result)
+    drop_rocks(input, 2022).context("failed")
 }
 
 #[aoc(day17, part2)]
@@ -200,5 +199,5 @@ pub fn solve_part2(input: &[char]) -> Result<u128> {
     let result = drop_rocks(input, to_simulate as usize).context("failed")?;
     let height = (result as u128) + (omitted_cycles - 1) * loop_height;
 
-    Ok(height as u128)
+    Ok(height)
 }
