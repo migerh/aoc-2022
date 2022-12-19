@@ -1,8 +1,9 @@
-use std::str::FromStr;
+use std::{cmp::max, collections::VecDeque, str::FromStr};
 
 use anyhow::{Context, Error, Result};
-use regex::Regex;
+use memoize::memoize;
 use rayon::prelude::*;
+use regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct Cost {
@@ -161,17 +162,36 @@ impl Resources {
         self.geode += other.geode;
     }
 
+    fn is_better(&self, other: &Self) -> bool {
+        self.ore >= other.ore - 2 &&
+        self.clay >= other.clay - 2 &&
+        self.obsidian >= other.obsidian - 2 &&
+        self.geode >= other.geode - 2
+    }
+
     fn beyond_limits(&self, limits: &Self) -> bool {
         self.ore >= limits.ore && self.clay >= limits.clay && self.obsidian >= limits.obsidian
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct State {
     res: Resources,
     robos: Resources,
 }
 
-fn find_new_states(res: &Resources, robos: &Resources, bp: &Blueprint, limits: &Resources) -> Vec<State> {
+impl State {
+    fn is_better(&self, other: &Self) -> bool {
+        self.res.is_better(&other.res) && self.robos.is_better(&other.robos)
+    }
+}
+
+fn find_new_states(
+    res: &Resources,
+    robos: &Resources,
+    bp: &Blueprint,
+    limits: &Resources,
+) -> Vec<State> {
     let mut new_states = vec![];
 
     if res.ore >= bp.cost_geode.ore && res.obsidian >= bp.cost_geode.obsidian {
@@ -187,9 +207,19 @@ fn find_new_states(res: &Resources, robos: &Resources, bp: &Blueprint, limits: &
             res: new_res,
             robos: new_robos,
         });
+
+        return new_states;
     }
 
-    if res.ore >= bp.cost_obsidian.ore && res.clay >= bp.cost_obsidian.clay && robos.obsidian < limits.obsidian {
+    // We can already build a new geode robot every minute, no point in building other robots or idling
+    // if robos.ore >= bp.cost_geode.ore && robos.obsidian >= bp.cost_geode.obsidian {
+    //     return new_states;
+    // }
+
+    if res.ore >= bp.cost_obsidian.ore
+        && res.clay >= bp.cost_obsidian.clay
+        && robos.obsidian < limits.obsidian
+    {
         let mut new_res = *res;
         new_res.ore -= bp.cost_obsidian.ore;
         new_res.clay -= bp.cost_obsidian.clay;
@@ -254,48 +284,83 @@ fn search_recursive(state: &State, bp: &Blueprint, time: usize, limits: &Resourc
         .unwrap_or_default()
 }
 
-fn search_iterative(initial_state: State, bp: &Blueprint, limits: &Resources, end: isize) -> isize {
-    let mut queue: Vec<(State, isize)> = vec![(initial_state, 0)];
+fn best_case_scenario(resg: isize, robg: isize, time: isize, end: isize) -> isize {
+    let mut result = resg;
+    for i in time..end {
+        result += robg + i;
+    }
+    result
+}
 
-    let mut max: isize = 0;
-    while let Some(q) = queue.pop() {
+fn search_iterative(initial_state: State, bp: &Blueprint, limits: &Resources, end: isize) -> isize {
+    let mut queue: VecDeque<(State, isize)> = vec![(initial_state, 0)]
+        .into_iter()
+        .collect::<VecDeque<_>>();
+
+    let mut global_max = 0;
+    let mut max = vec![0; end as usize + 1];
+    let mut best = vec![State { res: Resources::new_resources(), robos: Resources::new_robots() }; end as usize + 1];
+    while let Some(q) = queue.pop_back() {
+        if max[q.1 as usize] < q.0.res.geode {
+            max[q.1 as usize] = q.0.res.geode;
+            best[q.1 as usize] = q.0;
+        }
+
+        if global_max < q.0.res.geode {
+            global_max = q.0.res.geode;
+        }
+
         if q.1 >= end {
-            if max <= q.0.res.geode {
-                max = q.0.res.geode;
-            }
             continue;
         }
+
         let new_states = find_new_states(&q.0.res, &q.0.robos, bp, limits);
 
-        let max = new_states
+        let local_max = new_states
             .iter()
             .map(|s| s.res.geode)
             .max()
             .unwrap_or_default();
 
-        for s in new_states.into_iter().filter(|s| s.res.geode >= max) {
-            queue.push((s, q.1 + 1));
+        let it = new_states
+            .into_iter()
+            .filter(|s| s.res.geode >= local_max)
+            // .filter(|s| s.is_better(&best[(q.1 + 1) as usize]))
+            .filter(|s| s.res.geode + best_case_scenario(s.res.geode, s.robos.geode, q.1 + 1, end) >= global_max);
+
+        for s in it {
+            queue.push_back((s, q.1 + 1));
         }
+
+        // queue = queue
+        //     .into_iter()
+        //     .filter(|s| s.0.res.geode + best_case_scenario(&s.0, s.1 + 1, end) >= max)
+        //     .collect::<VecDeque<_>>();
     }
 
-    max
+    max[end as usize]
 }
 
 fn robot_limits(blueprint: &Blueprint) -> Resources {
     let mut max_robos = Resources::new_resources();
 
-    max_robos.ore = blueprint.cost_geode.ore + 2;
-    max_robos.clay = blueprint.cost_obsidian.clay + 2;
-    max_robos.obsidian = blueprint.cost_geode.obsidian + 2;
+    max_robos.ore = max(
+        max(
+            max(blueprint.cost_geode.ore, blueprint.cost_obsidian.ore),
+            blueprint.cost_clay.ore,
+        ),
+        blueprint.cost_ore.ore,
+    );
+    max_robos.clay = blueprint.cost_obsidian.clay;
+    max_robos.obsidian = blueprint.cost_geode.obsidian;
 
     max_robos
 }
 
 #[aoc(day19, part1)]
 pub fn solve_part1(input: &[Blueprint]) -> Result<isize> {
-    // guesses: 1498 too low
-    //          1579 too low
-    let result = input.par_iter()
+    let result = input
+        .par_iter()
         .enumerate()
         .map(|(i, bp)| {
             let limits = robot_limits(bp);
@@ -312,10 +377,11 @@ pub fn solve_part1(input: &[Blueprint]) -> Result<isize> {
 
 #[aoc(day19, part2)]
 pub fn solve_part2(input: &[Blueprint]) -> Result<isize> {
-    let result = input.par_iter()
+    let result = input
+        .par_iter()
         .enumerate()
         .take(3)
-        .map(|(i, bp)| {
+        .map(|(_, bp)| {
             let limits = robot_limits(bp);
             let res = Resources::new_resources();
             let robos = Resources::new_robots();
