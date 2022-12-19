@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use anyhow::{Context, Error, Result};
-use pathfinding::prelude::dijkstra_all;
 use regex::Regex;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Cost {
@@ -127,7 +127,7 @@ pub fn input_generator(input: &str) -> Result<Vec<Blueprint>> {
         .context("Error while parsing input")
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Resources {
     ore: isize,
     clay: isize,
@@ -160,131 +160,170 @@ impl Resources {
         self.obsidian += other.obsidian;
         self.geode += other.geode;
     }
+
+    fn beyond_limits(&self, limits: &Self) -> bool {
+        self.ore >= limits.ore && self.clay >= limits.clay && self.obsidian >= limits.obsidian
+    }
 }
 
 pub struct State {
     res: Resources,
-    rob: Resources,
-    time: usize,
+    robos: Resources,
 }
 
-fn collect_resources(res: &Resources, rob: &Resources) -> Resources {
-    let mut new_res = res.to_owned();
-    new_res.add(rob);
-
-    new_res
-}
-
-fn build_robot(res: &Resources, rob: &Resources, bp: &Blueprint) -> Vec<(Resources, Resources)> {
-    let mut result = vec![(*res, *rob)];
+fn find_new_states(res: &Resources, robos: &Resources, bp: &Blueprint, limits: &Resources) -> Vec<State> {
+    let mut new_states = vec![];
 
     if res.ore >= bp.cost_geode.ore && res.obsidian >= bp.cost_geode.obsidian {
         let mut new_res = *res;
         new_res.ore -= bp.cost_geode.ore;
         new_res.obsidian -= bp.cost_geode.obsidian;
+        new_res.add(robos);
 
-        let mut new_rob = *rob;
-        new_rob.geode += 1;
-        result.push((new_res, new_rob));
+        let mut new_robos = *robos;
+        new_robos.geode += 1;
+
+        new_states.push(State {
+            res: new_res,
+            robos: new_robos,
+        });
     }
 
-    if res.ore >= bp.cost_obsidian.ore && res.clay >= bp.cost_obsidian.clay {
+    if res.ore >= bp.cost_obsidian.ore && res.clay >= bp.cost_obsidian.clay && robos.obsidian < limits.obsidian {
         let mut new_res = *res;
         new_res.ore -= bp.cost_obsidian.ore;
         new_res.clay -= bp.cost_obsidian.clay;
+        new_res.add(robos);
 
-        let mut new_rob = *rob;
-        new_rob.obsidian += 1;
-        result.push((new_res, new_rob));
+        let mut new_robos = *robos;
+        new_robos.obsidian += 1;
+
+        new_states.push(State {
+            res: new_res,
+            robos: new_robos,
+        });
     }
 
-    if res.ore >= bp.cost_clay.ore {
+    if res.ore >= bp.cost_clay.ore && robos.clay < limits.clay {
         let mut new_res = *res;
         new_res.ore -= bp.cost_clay.ore;
+        new_res.add(robos);
 
-        let mut new_rob = *rob;
-        new_rob.clay += 1;
+        let mut new_robos = *robos;
+        new_robos.clay += 1;
 
-        result.push((new_res, new_rob));
+        new_states.push(State {
+            res: new_res,
+            robos: new_robos,
+        });
     }
 
-    if res.ore >= bp.cost_ore.ore {
+    if res.ore >= bp.cost_ore.ore && robos.ore < limits.ore {
         let mut new_res = *res;
         new_res.ore -= bp.cost_ore.ore;
+        new_res.add(robos);
 
-        let mut new_rob = *rob;
-        new_rob.ore += 1;
-        
-        result.push((new_res, new_rob));
+        let mut new_robos = *robos;
+        new_robos.ore += 1;
+
+        new_states.push(State {
+            res: new_res,
+            robos: new_robos,
+        });
     }
 
-    result
+    let mut new_res = *res;
+    new_res.add(robos);
+    new_states.push(State {
+        res: new_res,
+        robos: *robos,
+    });
+
+    new_states
 }
 
-fn get_neighbors(state: &State, res: &Resources, rob: &Resources, bp: &Blueprint) -> Vec<(State, isize)> {
-    build_robot(res, rob, bp)
+fn search_recursive(state: &State, bp: &Blueprint, time: usize, limits: &Resources) -> isize {
+    if time == 24 {
+        return state.res.geode;
+    }
+
+    find_new_states(&state.res, &state.robos, bp, limits)
         .into_iter()
-        .map(|s| (State { res: s.0, rob: s.1, time: state.time }, -s.0.geode))
-        .collect::<Vec<_>>()
+        .map(|s| search_recursive(&s, bp, time + 1, limits))
+        .max()
+        .unwrap_or_default()
+}
+
+fn search_iterative(initial_state: State, bp: &Blueprint, limits: &Resources, end: isize) -> isize {
+    let mut queue: Vec<(State, isize)> = vec![(initial_state, 0)];
+
+    let mut max: isize = 0;
+    while let Some(q) = queue.pop() {
+        if q.1 >= end {
+            if max <= q.0.res.geode {
+                max = q.0.res.geode;
+            }
+            continue;
+        }
+        let new_states = find_new_states(&q.0.res, &q.0.robos, bp, limits);
+
+        let max = new_states
+            .iter()
+            .map(|s| s.res.geode)
+            .max()
+            .unwrap_or_default();
+
+        for s in new_states.into_iter().filter(|s| s.res.geode >= max) {
+            queue.push((s, q.1 + 1));
+        }
+    }
+
+    max
+}
+
+fn robot_limits(blueprint: &Blueprint) -> Resources {
+    let mut max_robos = Resources::new_resources();
+
+    max_robos.ore = blueprint.cost_geode.ore + 2;
+    max_robos.clay = blueprint.cost_obsidian.clay + 2;
+    max_robos.obsidian = blueprint.cost_geode.obsidian + 2;
+
+    max_robos
 }
 
 #[aoc(day19, part1)]
-pub fn solve_part1(input: &[Blueprint]) -> Result<usize> {
-    for b in input {
-        let mut robots = Resources::new_robots();
-        let mut resources = Resources::new_resources();
+pub fn solve_part1(input: &[Blueprint]) -> Result<isize> {
+    // guesses: 1498 too low
+    //          1579 too low
+    let result = input.par_iter()
+        .enumerate()
+        .map(|(i, bp)| {
+            let limits = robot_limits(bp);
+            let res = Resources::new_resources();
+            let robos = Resources::new_robots();
+            let state = State { res, robos };
 
-        println!("Blueprint #{}", b.number);
-        // for i in 0..24 {
-        //     println!("== Minute {} ==", i + 1);
-        //     let new_res = collect_resources(&resources, &robots);
-        //     let res_diff = build_robot(&resources, &mut robots, b);
-        //     resources = new_res;
-        //     resources.add(&res_diff);
+            ((i as isize) + 1) * search_iterative(state, bp, &limits, 24)
+        })
+        .sum();
 
-        //     println!(
-        //         "res: ore {}, clay {}, obs {}, geo {}",
-        //         resources.ore, resources.clay, resources.obsidian, resources.geode
-        //     );
-        //     println!(
-        //         "rob: ore {}, clay {}, obs {}, geo {}",
-        //         robots.ore, robots.clay, robots.obsidian, robots.geode
-        //     );
-        //     println!();
-        // }
-        // println!();
-        // println!();
-    }
-
-    Ok(input.len())
+    Ok(result)
 }
 
 #[aoc(day19, part2)]
-pub fn solve_part2(input: &[Blueprint]) -> Result<usize> {
-    Ok(input.len())
-}
+pub fn solve_part2(input: &[Blueprint]) -> Result<isize> {
+    let result = input.par_iter()
+        .enumerate()
+        .take(3)
+        .map(|(i, bp)| {
+            let limits = robot_limits(bp);
+            let res = Resources::new_resources();
+            let robos = Resources::new_robots();
+            let state = State { res, robos };
 
-#[cfg(test)]
-mod test {
-    use super::*;
+            search_iterative(state, bp, &limits, 32)
+        })
+        .product();
 
-    fn sample() -> &'static str {
-        ""
-    }
-
-    fn input() -> Result<Vec<Blueprint>> {
-        input_generator(sample())
-    }
-
-    #[test]
-    fn part1_sample() -> Result<()> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part1(&data)?))
-    }
-
-    #[test]
-    fn part2_sample() -> Result<()> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part2(&data)?))
-    }
+    Ok(result)
 }
