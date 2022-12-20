@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, str::FromStr};
 
-use anyhow::{Context, Error, Result};
+use anyhow::{Context, Result};
 use itertools::Itertools;
 
 #[aoc_generator(day20)]
@@ -21,6 +21,7 @@ fn mix(input: &[isize], repeat: usize) -> Result<Vec<isize>> {
         .map(|(i, v)| (i, v))
         .collect::<VecDeque<_>>();
     let len = input.len() as isize;
+    let mut count: u128 = 0;
 
     for rep in 0..repeat {
         println!("rep {rep}");
@@ -35,11 +36,21 @@ fn mix(input: &[isize], repeat: usize) -> Result<Vec<isize>> {
 
             let shift = element.1;
             let mut index_to_move_to = (index_to_move as isize) + shift;
+            if index_to_move_to < 0 {
+                let factor = (index_to_move_to / (len - 1) + 1).abs();
+                index_to_move_to += factor * (len - 1);
+            }
             while index_to_move_to < 0 {
+                count += 1;
                 index_to_move_to += len - 1;
             }
 
+            if index_to_move_to >= len {
+                let factor = index_to_move_to / (len - 1);
+                index_to_move_to -= factor * (len - 1);
+            }
             while index_to_move_to >= len {
+                count += 1;
                 index_to_move_to -= len - 1;
             }
 
@@ -50,6 +61,8 @@ fn mix(input: &[isize], repeat: usize) -> Result<Vec<isize>> {
             with_indexes.insert(index_to_move_to as usize, element);
         }
     }
+
+    println!("Loop runs {count}");
 
     Ok(with_indexes.into_iter().map(|(_, v)| v).collect::<Vec<_>>())
 }
