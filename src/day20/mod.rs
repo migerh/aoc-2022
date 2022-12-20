@@ -21,10 +21,8 @@ fn mix(input: &[isize], repeat: usize) -> Result<Vec<isize>> {
         .map(|(i, v)| (i, v))
         .collect::<VecDeque<_>>();
     let len = input.len() as isize;
-    let mut count: u128 = 0;
 
-    for rep in 0..repeat {
-        println!("rep {rep}");
+    for _ in 0..repeat {
         for index in 0..input.len() {
             let (index_to_move, _) = with_indexes
                 .iter()
@@ -41,7 +39,6 @@ fn mix(input: &[isize], repeat: usize) -> Result<Vec<isize>> {
                 index_to_move_to += factor * (len - 1);
             }
             while index_to_move_to < 0 {
-                count += 1;
                 index_to_move_to += len - 1;
             }
 
@@ -50,7 +47,6 @@ fn mix(input: &[isize], repeat: usize) -> Result<Vec<isize>> {
                 index_to_move_to -= factor * (len - 1);
             }
             while index_to_move_to >= len {
-                count += 1;
                 index_to_move_to -= len - 1;
             }
 
@@ -62,14 +58,10 @@ fn mix(input: &[isize], repeat: usize) -> Result<Vec<isize>> {
         }
     }
 
-    println!("Loop runs {count}");
-
     Ok(with_indexes.into_iter().map(|(_, v)| v).collect::<Vec<_>>())
 }
 
-#[aoc(day20, part1)]
-pub fn solve_part1(input: &[isize]) -> Result<isize> {
-    let mixed = mix(input, 1)?;
+fn hash(mixed: &[isize]) -> Result<isize> {
     let len = mixed.len();
     let (index, _) = mixed
         .iter()
@@ -81,6 +73,12 @@ pub fn solve_part1(input: &[isize]) -> Result<isize> {
     let c = mixed[(index + 3000) % len as usize];
 
     Ok(a + b + c)
+}
+
+#[aoc(day20, part1)]
+pub fn solve_part1(input: &[isize]) -> Result<isize> {
+    let mixed = mix(input, 1)?;
+    hash(&mixed)
 }
 
 #[aoc(day20, part2)]
@@ -88,17 +86,5 @@ pub fn solve_part2(input: &[isize]) -> Result<isize> {
     const FOO: isize = 811589153;
     let input = input.iter().map(|v| *v * FOO).collect::<Vec<_>>();
     let mixed = mix(&input, 10)?;
-    let len = mixed.len();
-    let (index, _) = mixed
-        .iter()
-        .find_position(|v| **v == 0)
-        .context("Could not find 0")?;
-
-    let a = mixed[(index + 1000) % len as usize];
-    let b = mixed[(index + 2000) % len as usize];
-    let c = mixed[(index + 3000) % len as usize];
-
-    println!("{a} + {b} + {c} = {}", a + b + c);
-
-    Ok(a + b + c)
+    hash(&mixed)
 }
