@@ -185,19 +185,10 @@ impl<'a> State<'a> {
 
         let opened_iter = next
             .iter()
-            // .filter(|&(v, _)| v.flow_rate > 0)
             .filter(|&(v, _)| !self.opened.contains(v))
             .filter(|&(v, _)| !self.visited.contains(v))
             .filter_map(|&(v, d)| self.next(v, d, true, limit));
 
-        // let not_opened_iter = next
-        //     .iter()
-        //     // .filter(|&(v, _)| v.flow_rate > 0)
-        //     .filter(|&(v, _)| !self.opened.contains(v))
-        //     .filter(|&(v, _)| !self.visited.contains(v))
-        //     .filter_map(|&(v, d)| self.next(v, d, false));
-
-        // let mut result = opened_iter.chain(not_opened_iter).collect::<Vec<_>>();
         let mut result = opened_iter.collect::<Vec<_>>();
         result.push(self.wait(1));
         result
