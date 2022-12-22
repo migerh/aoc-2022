@@ -169,36 +169,23 @@ fn is_void(map: &Map, pos: &Coords) -> bool {
     !map.contains_key(pos) || is(map, pos, Tile::Void)
 }
 
-fn back_to_safety(map: &Map, mut pos: Coords, delta: &Coords) -> Coords {
-    while is_void(map, &pos) {
-        pos.0 += delta.0;
-        pos.1 += delta.1;
-    }
-
-    pos
-}
-
 fn mov(pos: &Coords, delta: &Coords, max_c: &Coords, map: &Map) -> Coords {
     let mut new_pos = (pos.0 + delta.0, pos.1 + delta.1);
 
     if new_pos.0 < 0 {
         new_pos.0 = max_c.0;
-        new_pos = back_to_safety(map, new_pos, delta);
     }
 
     if new_pos.0 > max_c.0 {
         new_pos.0 = 0;
-        new_pos = back_to_safety(map, new_pos, delta);
     }
 
     if new_pos.1 < 0 {
         new_pos.1 = max_c.1;
-        new_pos = back_to_safety(map, new_pos, delta);
     }
 
     if new_pos.1 > max_c.1 {
         new_pos.1 = 0;
-        new_pos = back_to_safety(map, new_pos, delta);
     }
 
     new_pos
@@ -232,7 +219,6 @@ fn step(mut state: State, map: &Map, max_c: &Coords) -> State {
 fn walk(mut state: State, cmds: &Vec<Command>, map: &Map, max_c: &Coords) -> State {
     let mut path = vec![state.clone()];
     for cmd in cmds {
-        println!("Executing {:?}", cmd);
         match cmd {
             Command::Forward(f) => {
                 for _ in 0..*f {
@@ -260,8 +246,6 @@ fn walk(mut state: State, cmds: &Vec<Command>, map: &Map, max_c: &Coords) -> Sta
             }
         }
     }
-
-    print_path(map, &path, max_c);
 
     state
 }
@@ -304,7 +288,6 @@ fn print_path(map: &Map, path: &[State], max_c: &Coords) {
 
 #[aoc(day22, part1)]
 pub fn solve_part1(input: &(Map, Vec<Command>)) -> Result<isize> {
-    // guesses 169060 - too high
     let mut map = input.0.to_owned();
     let initial_state = State::new(start(&input.0), Direction::Right);
     let max_c = max_coords(&input.0);
@@ -325,8 +308,6 @@ pub fn solve_part1(input: &(Map, Vec<Command>)) -> Result<isize> {
             Direction::Left => 2,
             Direction::Up => 3,
         };
-
-    println!("{:?}", destination);
 
     Ok(hash)
 }
