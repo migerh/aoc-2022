@@ -169,7 +169,7 @@ fn is_void(map: &Map, pos: &Coords) -> bool {
     !map.contains_key(pos) || is(map, pos, Tile::Void)
 }
 
-fn mov(pos: &Coords, delta: &Coords, max_c: &Coords, map: &Map) -> Coords {
+fn mov(pos: &Coords, delta: &Coords, max_c: &Coords) -> Coords {
     let mut new_pos = (pos.0 + delta.0, pos.1 + delta.1);
 
     if new_pos.0 < 0 {
@@ -199,11 +199,11 @@ fn step(mut state: State, map: &Map, max_c: &Coords) -> State {
         Direction::Left => (-1, 0),
     };
 
-    let mut new_pos = mov(&state.pos, &delta, max_c, map);
+    let mut new_pos = mov(&state.pos, &delta, max_c);
 
     // keep going if we reach a void
     while is_void(map, &new_pos) {
-        new_pos = mov(&new_pos, &delta, max_c, map);
+        new_pos = mov(&new_pos, &delta, max_c);
     }
 
     // reset if we hit a wall
@@ -216,13 +216,13 @@ fn step(mut state: State, map: &Map, max_c: &Coords) -> State {
     state
 }
 
-fn walk(mut state: State, cmds: &Vec<Command>, map: &Map, max_c: &Coords) -> State {
+fn walk(mut state: State, cmds: &Vec<Command>, map: &Map, max_c: &Coords, step_fn: &dyn Fn(State, &Map, &Coords) -> State) -> State {
     let mut path = vec![state.clone()];
     for cmd in cmds {
         match cmd {
             Command::Forward(f) => {
                 for _ in 0..*f {
-                    state = step(state, map, max_c);
+                    state = step_fn(state, map, max_c);
                     path.push(state.clone());
                 }
             }
@@ -250,6 +250,7 @@ fn walk(mut state: State, cmds: &Vec<Command>, map: &Map, max_c: &Coords) -> Sta
     state
 }
 
+#[allow(dead_code)]
 fn dir_to_char(dir: &Direction) -> char {
     match dir {
         Direction::Up => '^',
@@ -259,6 +260,7 @@ fn dir_to_char(dir: &Direction) -> char {
     }
 }
 
+#[allow(dead_code)]
 fn tile_to_char(tile: &Tile) -> char {
     match tile {
         Tile::Void => ' ',
@@ -267,6 +269,7 @@ fn tile_to_char(tile: &Tile) -> char {
     }
 }
 
+#[allow(dead_code)]
 fn print_path(map: &Map, path: &[State], max_c: &Coords) {
     for y in 0..=max_c.1 {
         for x in 0..=max_c.0 {
@@ -288,17 +291,10 @@ fn print_path(map: &Map, path: &[State], max_c: &Coords) {
 
 #[aoc(day22, part1)]
 pub fn solve_part1(input: &(Map, Vec<Command>)) -> Result<isize> {
-    let mut map = input.0.to_owned();
     let initial_state = State::new(start(&input.0), Direction::Right);
     let max_c = max_coords(&input.0);
 
-    for y in 0..=max_c.1 {
-        for x in 0..=max_c.0 {
-            map.entry((x, y)).or_insert(Tile::Void);
-        }
-    }
-
-    let destination = walk(initial_state, &input.1, &map, &max_c);
+    let destination = walk(initial_state, &input.1, &input.0, &max_c, &step);
 
     let hash = (destination.pos.1 + 1) * 1000
         + 4 * (destination.pos.0 + 1)
@@ -312,7 +308,151 @@ pub fn solve_part1(input: &(Map, Vec<Command>)) -> Result<isize> {
     Ok(hash)
 }
 
+fn get_area(pos: &Coords) -> Option<u8> {
+    if pos.0 >= 0 && pos.0 < 50 {
+        if pos.1 >= 100 && pos.1 < 150 {
+            Some(3)
+        } else if pos.1 >= 150 && pos.1 < 200 {
+            Some(4)
+        } else {
+            None
+        }
+    } else if pos.0 >= 50 && pos.0 < 100 {
+        if pos.1 >= 0 && pos.1 < 50 {
+            Some(1)
+        } else if pos.1 >= 50 && pos.1 < 100 {
+            Some(2)
+        } else if pos.1 >= 100 && pos.1 < 150 {
+            Some(5)
+        } else {
+            None
+        }
+    } else if pos.1 >= 0 && pos.1 < 50 {
+        Some(6)
+    } else {
+        None
+    }
+}
+
+//
+// My Cube
+//
+//  -  1  6 
+//  -  2  -
+//  3  5  -
+//  4  -  -
+//
+
+fn teleport(mut state: State) -> State {
+    let src_area = get_area(&state.pos).expect("This should never happen");
+    use Direction::*;
+
+    match (src_area, state.dir.clone()) {
+        (1, Left) => {
+            state.dir = Right;
+            state.pos = (0, 149 - state.pos.1);
+        },
+        (1, Up) => {
+            state.dir = Right;
+            state.pos = (0, 100 + state.pos.0);
+        }
+        (2, Left) => {
+            state.dir = Down;
+            state.pos = (state.pos.1 - 50, 100);
+        },
+        (2, Right) => {
+            state.dir = Up;
+            state.pos = (state.pos.1 + 50, 49);
+        },
+        (3, Left) => {
+            state.dir = Right;
+            state.pos = (50, 149 - state.pos.1);
+        },
+        (3, Up) => {
+            state.dir = Right;
+            state.pos = (50, 50 + state.pos.0);
+        },
+        (4, Left) => {
+            state.dir = Down;
+            state.pos = (state.pos.1 - 100, 0);
+        },
+        (4, Right) => {
+            state.dir = Up;
+            state.pos = (state.pos.1 - 100, 149);
+        },
+        (4, Down) => {
+            state.dir = Down;
+            state.pos = (state.pos.0 + 100, 0);
+        },
+        (5, Down) => {
+            state.dir = Left;
+            state.pos = (49, state.pos.0 + 100);
+        },
+        (5, Right) => {
+            state.dir = Left;
+            state.pos = (149, 149 - state.pos.1);
+        },
+        (6, Up) => {
+            state.dir = Up;
+            state.pos = (state.pos.0 - 100, 199);
+        },
+        (6, Right) => {
+            state.dir = Left;
+            state.pos = (99, 149 - state.pos.1);
+        },
+        (6, Down) => {
+            state.dir = Left;
+            state.pos = (99, state.pos.0 - 50);
+        },
+        _ => panic!("This should not happen")
+    }
+
+    state
+}
+
+fn step2(state: State, map: &Map, _max_c: &Coords) -> State {
+    use Direction::*;
+
+    let delta = match state.dir {
+        Up => (0, -1),
+        Right => (1, 0),
+        Down => (0, 1),
+        Left => (-1, 0),
+    };
+
+    let mut new_state = state.clone();
+    new_state.pos = (state.pos.0 + delta.0, state.pos.1 + delta.1);
+
+    // teleport to the right tile when we hit a void
+    while is_void(map, &new_state.pos) {
+        new_state = teleport(state.clone());
+    }
+
+    // reset if we hit a wall
+    if is_wall(map, &new_state.pos) {
+        new_state = state;
+    }
+
+    new_state
+}
+
 #[aoc(day22, part2)]
-pub fn solve_part2(input: &(Map, Vec<Command>)) -> Result<usize> {
-    Ok(0)
+pub fn solve_part2(input: &(Map, Vec<Command>)) -> Result<isize> {
+    use Direction::*;
+
+    let initial_state = State::new(start(&input.0), Direction::Right);
+    let max_c = max_coords(&input.0);
+
+    let destination = walk(initial_state, &input.1, &input.0, &max_c, &step2);
+
+    let hash = (destination.pos.1 + 1) * 1000
+        + 4 * (destination.pos.0 + 1)
+        + match destination.dir {
+            Right => 0,
+            Down => 1,
+            Left => 2,
+            Up => 3,
+        };
+
+    Ok(hash)
 }
