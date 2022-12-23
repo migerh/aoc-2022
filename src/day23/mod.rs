@@ -1,13 +1,9 @@
-use std::{
-    collections::{HashSet, VecDeque, HashMap},
-    isize::MAX,
-    isize::MIN,
-    str::FromStr,
-};
+use std::collections::{HashMap, HashSet, VecDeque};
 
-use anyhow::{Context, Error, Result};
-use itertools::{Itertools, MinMaxResult};
-use rayon::iter::empty;
+use anyhow::{Context, Result};
+use itertools::Itertools;
+
+const DEBUG: bool = false;
 
 type Coords = (isize, isize);
 
@@ -61,9 +57,14 @@ fn search(dir: &Direction) -> Vec<Coords> {
 
 fn neighborhood8() -> Vec<Coords> {
     vec![
-        (-1, -1), (0, -1), (1, -1),
-        (-1, 0), (1, 0),
-        (-1, 1), (0, 1), (1, 1),
+        (-1, -1),
+        (0, -1),
+        (1, -1),
+        (-1, 0),
+        (1, 0),
+        (-1, 1),
+        (0, 1),
+        (1, 1),
     ]
 }
 
@@ -103,42 +104,46 @@ fn scatter_elves(
     mut elves: Vec<Elf>,
     mut order: VecDeque<Direction>,
     max_iteration: usize,
-) -> Vec<Elf> {
+) -> (usize, Vec<Elf>) {
+    let mut it = 0;
+
     for i in 0..max_iteration {
-        // println!("order {:?}", &order);
         let proposals = propose_new_positions(&elves, &order);
         if proposals.is_empty() {
+            it = i + 1;
             break;
         }
 
         // filter duplicates
         let mut counts = HashMap::new();
         for (i, p) in proposals.iter().cloned() {
-            counts.entry(p).and_modify(|(_, c)| *c += 1).or_insert((i, 1));
+            counts
+                .entry(p)
+                .and_modify(|(_, c)| *c += 1)
+                .or_insert((i, 1));
         }
 
         // apply non-duplicate proposals
-        for p in proposals
-            .into_iter()
-            .filter(|p| {
-                if let Some(e) = counts.get(&p.1) {
-                    e.1 <= 1
-                } else {
-                    true
-                }
-            })
-        {
+        for p in proposals.into_iter().filter(|p| {
+            if let Some(e) = counts.get(&p.1) {
+                e.1 <= 1
+            } else {
+                true
+            }
+        }) {
             elves[p.0].pos = p.1;
         }
 
         // shift order
         order.rotate_left(1);
 
-        println!("== End of Round {} ==", i + 1);
-        print(&elves);
+        if DEBUG {
+            println!("== End of Round {} ==", i + 1);
+            print(&elves);
+        }
     }
 
-    elves
+    (it, elves)
 }
 
 fn empty_ground(elves: Vec<Elf>) -> Option<usize> {
@@ -157,8 +162,8 @@ fn print(elves: &[Elf]) -> Option<()> {
     let minmax_w = elves.iter().map(|e| e.pos.0).minmax().into_option()?;
     let minmax_h = elves.iter().map(|e| e.pos.1).minmax().into_option()?;
 
-    for y in (minmax_h.0-1)..minmax_h.1+2 {
-        for x in (minmax_w.0-1)..=minmax_w.1+2 {
+    for y in (minmax_h.0 - 1)..minmax_h.1 + 2 {
+        for x in (minmax_w.0 - 1)..=minmax_w.1 + 2 {
             let c = if occupied.contains(&(x, y)) { '#' } else { '.' };
             print!("{c}");
         }
@@ -178,10 +183,12 @@ pub fn solve_part1(input: &[Elf]) -> Result<usize> {
         .into_iter()
         .collect::<VecDeque<_>>();
 
-    println!("== Initial State ==");
-    print(input);
+    if DEBUG {
+        println!("== Initial State ==");
+        print(input);
+    }
 
-    let elves = scatter_elves(elves, order, 10);
+    let (_, elves) = scatter_elves(elves, order, 10);
     let result = empty_ground(elves).context("Could not determine result")?;
 
     Ok(result)
@@ -189,30 +196,19 @@ pub fn solve_part1(input: &[Elf]) -> Result<usize> {
 
 #[aoc(day23, part2)]
 pub fn solve_part2(input: &[Elf]) -> Result<usize> {
-    Ok(input.len())
-}
+    use Direction::*;
 
-#[cfg(test)]
-mod test {
-    use super::*;
+    let elves = input.to_owned();
+    let order = vec![North, South, West, East]
+        .into_iter()
+        .collect::<VecDeque<_>>();
 
-    fn sample() -> &'static str {
-        ""
+    if DEBUG {
+        println!("== Initial State ==");
+        print(input);
     }
 
-    fn input() -> Result<Vec<Elf>> {
-        input_generator(sample())
-    }
+    let (it, _) = scatter_elves(elves, order, 1_000_000);
 
-    #[test]
-    fn part1_sample() -> Result<()> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part1(&data)?))
-    }
-
-    #[test]
-    fn part2_sample() -> Result<()> {
-        let data = input()?;
-        Ok(assert_eq!(0, solve_part2(&data)?))
-    }
+    Ok(it)
 }
