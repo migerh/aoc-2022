@@ -1,6 +1,10 @@
 mod valve;
 
-use std::{collections::{HashMap, HashSet}, str::FromStr, cmp::max};
+use std::{
+    cmp::max,
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use anyhow::{Context, Result};
 use pathfinding::prelude::dijkstra;
@@ -60,7 +64,10 @@ fn pre_calc_distances(valves: &[Valve]) -> DistanceMap {
         }
 
         distances.sort_by(|a, b| b.0.flow_rate.cmp(&a.0.flow_rate));
-        let distances = distances.into_iter().filter(|&(v, _)| v.flow_rate > 0).collect::<Vec<_>>();
+        let distances = distances
+            .into_iter()
+            .filter(|&(v, _)| v.flow_rate > 0)
+            .collect::<Vec<_>>();
         map.entry(start_valve).or_insert(distances);
     }
 
@@ -91,7 +98,13 @@ impl<'a> State<'a> {
         self.opened.iter().map(|v| v.flow_rate).sum::<usize>() * time
     }
 
-    fn next(&self, new_location: &'a Valve, distance: usize, open: bool, limit: usize) -> Option<Self> {
+    fn next(
+        &self,
+        new_location: &'a Valve,
+        distance: usize,
+        open: bool,
+        limit: usize,
+    ) -> Option<Self> {
         if self.opened.contains(&new_location) && open {
             return None;
         }
@@ -135,7 +148,7 @@ impl<'a> State<'a> {
         let next = if let Some(n) = map.get(self.location) {
             n
         } else {
-            return vec![]
+            return vec![];
         };
 
         if self.opened.len() > next.len() {
@@ -155,9 +168,7 @@ impl<'a> State<'a> {
 }
 
 fn total_flow(valves: &[Valve], map: &DistanceMap, limit: usize) -> Option<usize> {
-    let start = valves
-        .iter()
-        .find(|v| &v.name == "AA")?;
+    let start = valves.iter().find(|v| &v.name == "AA")?;
 
     let state = State::new(start);
     let mut queue = vec![state.clone()];
@@ -187,7 +198,19 @@ fn total_flow(valves: &[Valve], map: &DistanceMap, limit: usize) -> Option<usize
     }
 
     println!("number of states {}", number_of_states);
-    println!("total memory (approx): {}", core::mem::size_of::<State>() * number_of_states / 1024 / 1024);
+    println!(
+        "total memory (approx): {}",
+        core::mem::size_of::<State>() * number_of_states / 1024 / 1024
+    );
+
+    let number_of_relevant_valves = valves.iter().filter(|v| v.flow_rate > 0).count();
+    println!(
+        "States with at least 2 valves opened: {}",
+        states
+            .into_iter()
+            .filter(|s| s.opened.len() > number_of_relevant_valves / 2 - 2)
+            .count()
+    );
 
     Some(max_flow)
 }
