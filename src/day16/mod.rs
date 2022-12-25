@@ -7,7 +7,9 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use indicatif::ProgressBar;
 use pathfinding::prelude::dijkstra;
+use rayon::prelude::*;
 
 use self::valve::Valve;
 
@@ -167,13 +169,15 @@ impl<'a> State<'a> {
     }
 }
 
-fn total_flow(valves: &[Valve], map: &DistanceMap, limit: usize) -> Option<usize> {
+fn total_flow<'a>(valves: &'a [Valve], map: &'a DistanceMap, limit: usize, opened: Option<HashSet<&'a Valve>>) -> Option<(usize, Vec<State<'a>>)> {
     let start = valves.iter().find(|v| &v.name == "AA")?;
 
-    let state = State::new(start);
+    let mut state = State::new(start);
+    if let Some(opened) = opened {
+        state.opened = opened;
+    }
     let mut queue = vec![state.clone()];
     let mut max_flow = 0;
-    let mut number_of_states = 1;
 
     let largest_flow = valves.iter().map(|v| v.flow_rate).sum::<usize>();
     let mut states = Vec::with_capacity(23310000);
@@ -187,44 +191,60 @@ fn total_flow(valves: &[Valve], map: &DistanceMap, limit: usize) -> Option<usize
         }
 
         let best_case_remaining_flow = q.total_flow + (limit - q.time) * largest_flow;
-        if best_case_remaining_flow < max_flow {
+        if limit > 26 && best_case_remaining_flow < max_flow {
             continue;
         }
 
         let mut follow_up_states = q.follow_up_states(map, limit);
-        number_of_states += follow_up_states.len();
+
         states.append(&mut follow_up_states.clone());
         queue.append(&mut follow_up_states);
     }
 
-    println!("number of states {}", number_of_states);
-    println!(
-        "total memory (approx): {}",
-        core::mem::size_of::<State>() * number_of_states / 1024 / 1024
-    );
-
-    let number_of_relevant_valves = valves.iter().filter(|v| v.flow_rate > 0).count();
-    println!(
-        "States with at least 2 valves opened: {}",
-        states
-            .into_iter()
-            .filter(|s| s.opened.len() > number_of_relevant_valves / 2 - 2)
-            .count()
-    );
-
-    Some(max_flow)
+    Some((max_flow, states))
 }
 
 #[aoc(day16, part1)]
 pub fn solve_part1(input: &[Valve]) -> Result<usize> {
     let limit = 30;
     let map = pre_calc_distances(input);
-    let result = total_flow(input, &map, limit).context("Could not calculate")?;
+    let (result, _) = total_flow(input, &map, limit, None).context("Could not calculate")?;
 
     Ok(result)
 }
 
 #[aoc(day16, part2)]
 pub fn solve_part2(input: &[Valve]) -> Result<usize> {
-    Ok(input.len())
+    let limit = 26;
+    let map = pre_calc_distances(input);
+    let (_, mut states) = total_flow(input, &map, limit, None).context("Could not calculate")?;
+
+    states.sort_by(|a, b| b.total_flow.cmp(&a.total_flow));
+
+    let valves_to_open = input.iter().filter(|v| v.flow_rate > 0).count();
+    let pb = ProgressBar::new(states.len() as u64);
+    let max_flow = states.par_iter().map(|state_a| {
+        pb.inc(1);
+        let mut max_flow = 0;
+        for state_b in states.iter() {
+            if state_a.opened.len() + state_b.opened.len() > valves_to_open {
+                continue;
+            }
+
+            if state_a.opened.intersection(&state_b.opened).count() > 0 {
+                continue;
+            }
+
+            max_flow = max(max_flow, state_a.total_flow + state_b.total_flow);
+
+            // we have a sorted list, it's not going to get any better
+            break;
+        }
+
+        max_flow
+    })
+    .max().context("Could not determine max flow")?;
+    pb.finish_and_clear();
+
+    Ok(max_flow)
 }
